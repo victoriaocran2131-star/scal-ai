@@ -1,0 +1,16 @@
+{
+  "appId": "com.scalai.app",
+  "appName": "Scal AI",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https",
+    "url": "https://scal-ai.onrender.com",
+    "cleartext": false,
+    "allowNavigation": ["*"]
+  },
+  "plugins": {
+    "Camera": {
+      "permissions": ["camera"]
+    }
+  }
+}

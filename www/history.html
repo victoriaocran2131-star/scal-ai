@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scal AI - History</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1>📋 Scan History</h1>
+            <p>Your complete food tracking log</p>
+        </header>
+
+        <div class="history-controls">
+            <button id="backBtn" class="btn btn-secondary">
+                <span>←</span> Back to Scanner
+            </button>
+            <button id="clearAllBtn" class="btn btn-danger">
+                <span>🗑️</span> Clear All
+            </button>
+        </div>
+
+        <div class="date-filter">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="today">Today</button>
+            <button class="filter-btn" data-filter="week">This Week</button>
+            <button class="filter-btn" data-filter="month">This Month</button>
+        </div>
+
+        <div class="stats-cards">
+            <div class="stat-card">
+                <div class="stat-icon">🔥</div>
+                <div class="stat-value" id="statCalories">0</div>
+                <div class="stat-label">Total Calories</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🥩</div>
+                <div class="stat-value" id="statProtein">0g</div>
+                <div class="stat-label">Total Protein</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🫒</div>
+                <div class="stat-value" id="statFat">0g</div>
+                <div class="stat-label">Total Fat</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🍽️</div>
+                <div class="stat-value" id="statMeals">0</div>
+                <div class="stat-label">Meals Scanned</div>
+            </div>
+        </div>
+
+        <div class="history-list-container" id="historyListContainer">
+            <div class="empty-state" id="emptyState">
+                <span class="empty-icon">📷</span>
+                <h3>No Food Scanned Yet</h3>
+                <p>Start scanning food to build your history</p>
+                <button id="scanBtn" class="btn btn-primary">
+                    <span>📸</span> Start Scanning
+                </button>
+            </div>
+            
+            <div class="history-list" id="historyList"></div>
+        </div>
+
+        <div class="daily-breakdown" id="dailyBreakdown">
+            <h3>📅 Daily Breakdown</h3>
+            <div class="daily-list" id="dailyList"></div>
+        </div>
+    </div>
+
+    <script src="foodDatabase.js"></script>
+    <script src="history.js"></script>
+</body>
+</html>

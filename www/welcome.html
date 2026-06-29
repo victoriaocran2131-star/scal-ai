@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Scal AI</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="welcome-page">
+    <div class="welcome-container">
+        <div class="welcome-content">
+            <div class="welcome-logo">🍽️</div>
+            <h1 class="welcome-title">Scal AI</h1>
+            <p class="welcome-subtitle">Intelligent Food Recognition</p>
+            
+            <div class="bible-verse-card">
+                <div class="verse-icon">📖</div>
+                <p class="verse-text" id="verseText"></p>
+                <p class="verse-reference" id="verseReference"></p>
+            </div>
+            
+            <a href="signup.html" class="get-started-btn">
+                <span>Get Started</span>
+                <span class="arrow">→</span>
+            </a>
+            
+            <p class="welcome-footer">Scan food. Track nutrition. Live healthy.</p>
+        </div>
+    </div>
+
+    <script>
+        const bibleVerses = [
+            { text: "So whether you eat or drink or whatever you do, do it all for the glory of God.", reference: "1 Corinthians 10:31" },
+            { text: "Do you not know that your bodies are temples of the Holy Spirit, who is in you?", reference: "1 Corinthians 6:19" },
+            { text: "He gives food to every creature. His love endures forever.", reference: "Psalm 136:25" },
+            { text: "Trust in the Lord with all your heart and lean not on your own understanding.", reference: "Proverbs 3:5" },
+            { text: "I can do all things through Christ who strengthens me.", reference: "Philippians 4:13" },
+            { text: "The Lord is my shepherd, I lack nothing.", reference: "Psalm 23:1" },
+            { text: "For I know the plans I have for you, declares the Lord, plans to prosper you.", reference: "Jeremiah 29:11" },
+            { text: "Be strong and courageous. Do not be afraid; do not be discouraged.", reference: "Joshua 1:9" },
+            { text: "The Lord will fight for you; you need only to be still.", reference: "Exodus 14:14" },
+            { text: "And my God will meet all your needs according to the riches of his glory.", reference: "Philippians 4:19" },
+            { text: "Come to me, all you who are weary and burdened, and I will give you rest.", reference: "Matthew 11:28" },
+            { text: "The joy of the Lord is your strength.", reference: "Nehemiah 8:10" },
+            { text: "He has shown you, O mortal, what is good. And what does the Lord require of you? To act justly and to love mercy.", reference: "Micah 6:8" },
+            { text: "Taste and see that the Lord is good; blessed is the one who takes refuge in him.", reference: "Psalm 34:8" },
+            { text: "Your word is a lamp for my feet, a light on my path.", reference: "Psalm 119:105" },
+            { text: "For where your treasure is, there your heart will be also.", reference: "Matthew 6:21" },
+            { text: "The Lord is close to the brokenhearted and saves those who are crushed in spirit.", reference: "Psalm 34:18" },
+            { text: "And we know that in all things God works for the good of those who love him.", reference: "Romans 8:28" },
+            { text: "Commit to the Lord whatever you do, and he will establish your plans.", reference: "Proverbs 16:3" },
+            { text: "But those who hope in the Lord will renew their strength.", reference: "Isaiah 40:31" }
+        ];
+
+        function getRandomVerse() {
+            const randomIndex = Math.floor(Math.random() * bibleVerses.length);
+            return bibleVerses[randomIndex];
+        }
+
+        function displayVerse() {
+            const verse = getRandomVerse();
+            document.getElementById('verseText').textContent = `"${verse.text}"`;
+            document.getElementById('verseReference').textContent = `— ${verse.reference}`;
+        }
+
+        document.addEventListener('DOMContentLoaded', displayVerse);
+    </script>
+</body>
+</html>

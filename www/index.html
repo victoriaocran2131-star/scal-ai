@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scal AI - Food Scanner</title>
+    <link rel="stylesheet" href="style.css">
+    <script>
+        // Check if user is authenticated
+        const token = localStorage.getItem('scalai_token');
+        if (!token) {
+            window.location.href = 'signin.html';
+        }
+    </script>
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="header-content">
+                <h1>🍽️ Scal AI</h1>
+                <p id="userGreeting">Scan food, track calories & nutrients</p>
+            </div>
+            <div class="header-links">
+                <a href="about.html" class="about-link">
+                    <span>ℹ️</span> About
+                </a>
+                <a href="history.html" class="history-link">
+                    <span>📋</span> History
+                </a>
+                <button id="signoutBtn" class="signout-link">
+                    <span>🚪</span> Sign Out
+                </button>
+            </div>
+        </header>
+
+        <div class="scanner-section">
+            <div class="camera-container" id="cameraContainer">
+                <video id="video" autoplay playsinline></video>
+                <canvas id="canvas"></canvas>
+                <div class="scan-overlay">
+                    <div class="scan-frame">
+                        <div class="corner top-left"></div>
+                        <div class="corner top-right"></div>
+                        <div class="corner bottom-left"></div>
+                        <div class="corner bottom-right"></div>
+                    </div>
+                    <div class="scan-line" id="scanLine"></div>
+                </div>
+                <div class="camera-placeholder" id="cameraPlaceholder">
+                    <span class="camera-icon">📷</span>
+                    <p>Camera preview will appear here</p>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button id="startBtn" class="btn btn-primary">
+                    <span>📷</span> Camera
+                </button>
+                <button id="uploadBtn" class="btn btn-upload">
+                    <span>🖼️</span> Upload
+                </button>
+                <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                <button id="captureBtn" class="btn btn-capture" disabled>
+                    <span>📸</span> Scan Food
+                </button>
+            </div>
+        </div>
+
+        <div class="captured-section" id="capturedSection" style="display: none;">
+            <h3>📸 Captured Photo</h3>
+            <div class="captured-container">
+                <img id="capturedImage" src="" alt="Captured food">
+                <div class="flash-overlay" id="flashOverlay"></div>
+            </div>
+            <div class="captured-actions">
+                <button id="retakeBtn" class="btn btn-secondary">
+                    <span>🔄</span> Retake
+                </button>
+                <button id="downloadBtn" class="btn btn-secondary">
+                    <span>💾</span> Save
+                </button>
+            </div>
+        </div>
+
+        <div class="results-section" id="resultsSection">
+            <div class="loading" id="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p id="loadingText">Scanning food...</p>
+                <div class="scan-progress">
+                    <div class="scan-progress-bar" id="scanProgressBar"></div>
+                </div>
+            </div>
+
+            <div class="food-results" id="foodResults" style="display: none;">
+                <div class="nutrition-grid">
+                    <div class="nutrition-card calories">
+                        <div class="card-icon">🔥</div>
+                        <div class="card-value" id="calories">-</div>
+                        <div class="card-label">Calories</div>
+                    </div>
+                    <div class="nutrition-card protein">
+                        <div class="card-icon">🥩</div>
+                        <div class="card-value" id="protein">-</div>
+                        <div class="card-label">Protein (g)</div>
+                    </div>
+                    <div class="nutrition-card fat">
+                        <div class="card-icon">🫒</div>
+                        <div class="card-value" id="fat">-</div>
+                        <div class="card-label">Fat (g)</div>
+                    </div>
+                </div>
+
+                <div class="digestion-section">
+                    <h3>⏱️ Digestion Time</h3>
+                    <div class="digestion-info">
+                        <div class="digestion-bar-container">
+                            <div class="digestion-bar" id="digestionBar" style="width: 0%"></div>
+                        </div>
+                        <div class="digestion-time" id="digestionTime">-</div>
+                        <div class="digestion-desc" id="digestionDesc">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="error-msg" id="errorMsg" style="display: none;">
+                <span>⚠️</span>
+                <p id="errorText">Could not identify food. Please try again or select manually.</p>
+            </div>
+        </div>
+
+        <div class="manual-section">
+            <h3>Or select food manually:</h3>
+            <div class="search-container">
+                <input type="text" id="foodSearch" placeholder="Search for food (e.g., apple, pizza, rice)..." autocomplete="off">
+                <div class="suggestions" id="suggestions"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="foodDatabase.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
