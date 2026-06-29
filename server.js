@@ -12,8 +12,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'scal_ai_secret_key';
 
-// JSON file-based database
-const DB_FILE = path.join(__dirname, 'database.json');
+// JSON file-based database (use /tmp on Firebase, local dir otherwise)
+const isFirebase = !!process.env.FUNCTION_REGION;
+const DB_FILE = isFirebase ? '/tmp/database.json' : path.join(__dirname, 'database.json');
 
 function loadDB() {
     if (fs.existsSync(DB_FILE)) {
@@ -35,7 +36,7 @@ app.use(express.static(__dirname));
 // Configure multer for file uploads
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const uploadsDir = path.join(__dirname, 'uploads');
+        const uploadsDir = isFirebase ? '/tmp/uploads' : path.join(__dirname, 'uploads');
         if (!fs.existsSync(uploadsDir)) {
             fs.mkdirSync(uploadsDir, { recursive: true });
         }
@@ -445,24 +446,17 @@ app.post('/api/upload', authenticateToken, upload.single('image'), (req, res) =>
 });
 
 // Serve uploaded files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(isFirebase ? '/tmp/uploads' : path.join(__dirname, 'uploads')));
 
 // ==================== START SERVER ====================
 
+// Firebase Cloud Function export (only when on Firebase)
+if (process.env.FUNCTION_REGION) {
+    const functions = require('firebase-functions');
+    exports.api = functions.https.onRequest(app);
+}
+
+// Local server / Render / other hosts
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`
-╔══════════════════════════════════════════════════════════════╗
-║                                                              ║
-║                    🍽️  SCAL AI SERVER  🍽️                    ║
-║                                                              ║
-║  Server running at: http://localhost:${PORT}                    ║
-║                                                              ║
-║  Pages:                                                      ║
-║    Welcome:    http://localhost:${PORT}/welcome.html            ║
-║    Sign Up:    http://localhost:${PORT}/signup.html             ║
-║    Sign In:    http://localhost:${PORT}/signin.html             ║
-║    Main App:   http://localhost:${PORT}/index.html              ║
-║                                                              ║
-╚══════════════════════════════════════════════════════════════╝
-    `);
+    console.log(`SCAL AI SERVER running at http://localhost:${PORT}`);
 });
