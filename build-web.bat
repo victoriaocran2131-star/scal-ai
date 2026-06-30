@@ -12,10 +12,15 @@ copy signup.html www\
 copy welcome.html www\
 copy about.html www\
 copy history.html www\
+copy charts.html www\
+copy notifications.html www\
+copy subscription.html www\
 copy style.css www\
 copy app.js www\
 copy foodDatabase.js www\
 copy history.js www\
+copy charts.js www\
+copy notifications.js www\
 copy bg-food.jpg www\
 
 REM Copy food images if they exist

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scal AI - Subscription</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="auth-page">
+    <div class="auth-container">
+        <div class="auth-card subscription-card">
+            <div class="auth-header">
+                <div class="auth-logo">🍽️</div>
+                <h1>Subscribe to Scal AI</h1>
+                <p>Choose a plan to start tracking your nutrition</p>
+            </div>
+
+            <div class="subscription-status" id="subscriptionStatus" style="display: none;">
+                <div class="status-badge active">
+                    <span>✓</span> Active Subscription
+                </div>
+                <p id="statusText">Your subscription is active until <strong id="expiryDate">-</strong></p>
+            </div>
+
+            <div class="plans-container" id="plansContainer">
+                <div class="plan-card" data-plan="weekly">
+                    <div class="plan-badge">Pay Weekly</div>
+                    <div class="plan-price">$2.99</div>
+                    <div class="plan-period">per week</div>
+                    <div class="plan-features">
+                        <div class="plan-feature"><span>✓</span> Food Scanning</div>
+                        <div class="plan-feature"><span>✓</span> Nutrition Tracking</div>
+                        <div class="plan-feature"><span>✓</span> Scan History</div>
+                        <div class="plan-feature"><span>✓</span> Daily Goals</div>
+                        <div class="plan-feature"><span>✓</span> Charts & Analytics</div>
+                    </div>
+                    <button class="plan-btn" data-plan="weekly">Select Plan</button>
+                </div>
+
+                <div class="plan-card popular" data-plan="monthly">
+                    <div class="plan-badge popular-badge">Most Popular</div>
+                    <div class="plan-price">$9.99</div>
+                    <div class="plan-period">per month</div>
+                    <div class="plan-features">
+                        <div class="plan-feature"><span>✓</span> Food Scanning</div>
+                        <div class="plan-feature"><span>✓</span> Nutrition Tracking</div>
+                        <div class="plan-feature"><span>✓</span> Scan History</div>
+                        <div class="plan-feature"><span>✓</span> Daily Goals</div>
+                        <div class="plan-feature"><span>✓</span> Charts & Analytics</div>
+                        <div class="plan-feature"><span>✓</span> Meal Reminders</div>
+                    </div>
+                    <button class="plan-btn popular-btn" data-plan="monthly">Select Plan</button>
+                </div>
+
+                <div class="plan-card" data-plan="yearly">
+                    <div class="plan-badge savings-badge">Save 73%</div>
+                    <div class="plan-price">$89.99</div>
+                    <div class="plan-period">per year</div>
+                    <div class="plan-features">
+                        <div class="plan-feature"><span>✓</span> Food Scanning</div>
+                        <div class="plan-feature"><span>✓</span> Nutrition Tracking</div>
+                        <div class="plan-feature"><span>✓</span> Scan History</div>
+                        <div class="plan-feature"><span>✓</span> Daily Goals</div>
+                        <div class="plan-feature"><span>✓</span> Charts & Analytics</div>
+                        <div class="plan-feature"><span>✓</span> Meal Reminders</div>
+                        <div class="plan-feature highlight"><span>★</span> Best Value</div>
+                    </div>
+                    <button class="plan-btn" data-plan="yearly">Select Plan</button>
+                </div>
+            </div>
+
+            <div class="selected-plan-info" id="selectedPlanInfo" style="display: none;">
+                <div class="selected-plan-details">
+                    <span id="selectedPlanName">-</span>
+                    <span id="selectedPlanPrice">-</span>
+                </div>
+                <button id="confirmBtn" class="auth-btn">Subscribe Now</button>
+            </div>
+
+            <div class="processing-overlay" id="processingOverlay" style="display: none;">
+                <div class="spinner"></div>
+                <p>Processing subscription...</p>
+            </div>
+
+            <div class="error-message" id="errorMessage" style="display: none;"></div>
+            <div class="success-message" id="successMessage" style="display: none;"></div>
+
+            <div class="auth-footer">
+                <p>Already subscribed? <a href="signin.html">Sign In</a></p>
+            </div>
+
+            <a href="welcome.html" class="back-link">← Back to Welcome</a>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        class SubscriptionApp {
+            constructor() {
+                this.token = localStorage.getItem('scalai_token');
+                this.selectedPlan = null;
+                this.plans = {};
+                
+                this.init();
+            }
+            
+            init() {
+                document.querySelectorAll('.plan-btn').forEach(btn => {
+                    btn.addEventListener('click', () => this.selectPlan(btn.dataset.plan));
+                });
+                
+                document.getElementById('confirmBtn').addEventListener('click', () => this.confirmSubscription());
+                
+                if (this.token) {
+                    this.checkSubscription();
+                }
+                
+                this.loadPlans();
+            }
+            
+            async loadPlans() {
+                try {
+                    const response = await fetch(API_BASE + '/api/subscription/plans');
+                    const data = await response.json();
+                    if (data.success) {
+                        this.plans = data.plans;
+                    }
+                } catch (error) {
+                    console.log('Using default plans');
+                    this.plans = {
+                        weekly: { name: 'Weekly', price: 2.99, durationLabel: '1 Week' },
+                        monthly: { name: 'Monthly', price: 9.99, durationLabel: '1 Month' },
+                        yearly: { name: 'Yearly', price: 89.99, durationLabel: '1 Year' }
+                    };
+                }
+            }
+            
+            async checkSubscription() {
+                try {
+                    const response = await fetch(API_BASE + '/api/subscription', {
+                        headers: { 'Authorization': `Bearer ${this.token}` }
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.hasActiveSubscription) {
+                        document.getElementById('subscriptionStatus').style.display = 'block';
+                        document.getElementById('expiryDate').textContent = new Date(data.subscription.expiresAt).toLocaleDateString();
+                        
+                        document.querySelectorAll('.plan-btn').forEach(btn => {
+                            btn.textContent = 'Current Plan';
+                            btn.disabled = true;
+                            btn.classList.add('current');
+                        });
+                        
+                        const currentCard = document.querySelector(`[data-plan="${data.subscription.plan}"]`);
+                        if (currentCard) {
+                            currentCard.classList.add('current-plan');
+                        }
+                    }
+                } catch (error) {
+                    console.log('Not logged in or no subscription');
+                }
+            }
+            
+            selectPlan(planId) {
+                this.selectedPlan = planId;
+                const plan = this.plans[planId];
+                
+                document.querySelectorAll('.plan-card').forEach(card => {
+                    card.classList.remove('selected');
+                });
+                
+                document.querySelector(`[data-plan="${planId}"]`).classList.add('selected');
+                
+                document.getElementById('selectedPlanInfo').style.display = 'block';
+                document.getElementById('selectedPlanName').textContent = plan.name + ' Plan';
+                document.getElementById('selectedPlanPrice').textContent = '$' + plan.price + ' / ' + plan.durationLabel;
+            }
+            
+            async confirmSubscription() {
+                if (!this.selectedPlan) return;
+                
+                if (!this.token) {
+                    localStorage.setItem('selectedPlan', this.selectedPlan);
+                    window.location.href = 'signup.html';
+                    return;
+                }
+                
+                const overlay = document.getElementById('processingOverlay');
+                const errorMsg = document.getElementById('errorMessage');
+                const successMsg = document.getElementById('successMessage');
+                
+                overlay.style.display = 'flex';
+                errorMsg.style.display = 'none';
+                successMsg.style.display = 'none';
+                
+                try {
+                    const response = await fetch(API_BASE + '/api/subscription/activate', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${this.token}`
+                        },
+                        body: JSON.stringify({ planId: this.selectedPlan })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Failed to activate subscription');
+                    }
+                    
+                    localStorage.setItem('hasActiveSubscription', 'true');
+                    
+                    successMsg.textContent = 'Subscription activated! Redirecting to app...';
+                    successMsg.style.display = 'block';
+                    overlay.style.display = 'none';
+                    
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1500);
+                    
+                } catch (error) {
+                    errorMsg.textContent = error.message;
+                    errorMsg.style.display = 'block';
+                    overlay.style.display = 'none';
+                }
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            new SubscriptionApp();
+        });
+    </script>
+</body>
+</html>

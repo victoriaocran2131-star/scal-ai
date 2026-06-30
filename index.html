@@ -5,12 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scal AI - Food Scanner</title>
     <link rel="stylesheet" href="style.css">
+    <script src="config.js"></script>
     <script>
         // Check if user is authenticated
         const token = localStorage.getItem('scalai_token');
         if (!token) {
             window.location.href = 'signin.html';
         }
+    </script>
+    <script>
+        // Check subscription status
+        async function checkSubscription() {
+            const token = localStorage.getItem('scalai_token');
+            if (!token) return;
+            
+            try {
+                const response = await fetch(API_BASE + '/api/subscription/check', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                
+                if (!data.hasActiveSubscription) {
+                    localStorage.removeItem('hasActiveSubscription');
+                    window.location.href = 'subscription.html';
+                } else {
+                    localStorage.setItem('hasActiveSubscription', 'true');
+                }
+            } catch (error) {
+                // Server unreachable - allow access if previously verified
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', checkSubscription);
     </script>
 </head>
 <body>
@@ -21,6 +47,15 @@
                 <p id="userGreeting">Scan food, track calories & nutrients</p>
             </div>
             <div class="header-links">
+                <a href="charts.html" class="about-link">
+                    <span>📊</span> Charts
+                </a>
+                <a href="notifications.html" class="about-link">
+                    <span>🔔</span> Reminders
+                </a>
+                <a href="subscription.html" class="about-link subscription-link">
+                    <span>⭐</span> Plan
+                </a>
                 <a href="about.html" class="about-link">
                     <span>ℹ️</span> About
                 </a>
@@ -108,6 +143,21 @@
                         <div class="card-value" id="fat">-</div>
                         <div class="card-label">Fat (g)</div>
                     </div>
+                    <div class="nutrition-card carbs">
+                        <div class="card-icon">🌾</div>
+                        <div class="card-value" id="carbs">-</div>
+                        <div class="card-label">Carbs (g)</div>
+                    </div>
+                    <div class="nutrition-card fiber">
+                        <div class="card-icon">🥦</div>
+                        <div class="card-value" id="fiber">-</div>
+                        <div class="card-label">Fiber (g)</div>
+                    </div>
+                    <div class="nutrition-card sugar">
+                        <div class="card-icon">🍬</div>
+                        <div class="card-value" id="sugar">-</div>
+                        <div class="card-label">Sugar (g)</div>
+                    </div>
                 </div>
 
                 <div class="digestion-section">
@@ -133,6 +183,99 @@
             <div class="search-container">
                 <input type="text" id="foodSearch" placeholder="Search for food (e.g., apple, pizza, rice)..." autocomplete="off">
                 <div class="suggestions" id="suggestions"></div>
+            </div>
+        </div>
+
+        <div class="goals-section" id="goalsSection">
+            <div class="goals-header">
+                <h3>🎯 Today's Progress</h3>
+                <button id="editGoalsBtn" class="goals-edit-btn">Edit Goals</button>
+            </div>
+            <div class="goals-grid" id="goalsGrid">
+                <div class="goal-item">
+                    <div class="goal-info">
+                        <span class="goal-icon">🔥</span>
+                        <span class="goal-label">Calories</span>
+                    </div>
+                    <div class="goal-bar-container">
+                        <div class="goal-bar calories-bar" id="caloriesBar" style="width: 0%"></div>
+                    </div>
+                    <div class="goal-values">
+                        <span id="caloriesConsumed">0</span> / <span id="caloriesGoal">2000</span> cal
+                    </div>
+                </div>
+                <div class="goal-item">
+                    <div class="goal-info">
+                        <span class="goal-icon">🥩</span>
+                        <span class="goal-label">Protein</span>
+                    </div>
+                    <div class="goal-bar-container">
+                        <div class="goal-bar protein-bar" id="proteinBar" style="width: 0%"></div>
+                    </div>
+                    <div class="goal-values">
+                        <span id="proteinConsumed">0</span> / <span id="proteinGoal">50</span>g
+                    </div>
+                </div>
+                <div class="goal-item">
+                    <div class="goal-info">
+                        <span class="goal-icon">🫒</span>
+                        <span class="goal-label">Fat</span>
+                    </div>
+                    <div class="goal-bar-container">
+                        <div class="goal-bar fat-bar" id="fatBar" style="width: 0%"></div>
+                    </div>
+                    <div class="goal-values">
+                        <span id="fatConsumed">0</span> / <span id="fatGoal">65</span>g
+                    </div>
+                </div>
+                <div class="goal-item">
+                    <div class="goal-info">
+                        <span class="goal-icon">🌾</span>
+                        <span class="goal-label">Carbs</span>
+                    </div>
+                    <div class="goal-bar-container">
+                        <div class="goal-bar carbs-bar" id="carbsBar" style="width: 0%"></div>
+                    </div>
+                    <div class="goal-values">
+                        <span id="carbsConsumed">0</span> / <span id="carbsGoal">300</span>g
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="goals-modal" id="goalsModal" style="display: none;">
+            <div class="goals-modal-content">
+                <div class="goals-modal-header">
+                    <h3>Set Daily Goals</h3>
+                    <button id="closeGoalsModal" class="goals-modal-close">×</button>
+                </div>
+                <div class="goals-form">
+                    <div class="goal-input-group">
+                        <label>🔥 Calories (cal)</label>
+                        <input type="number" id="goalCalories" min="0" max="10000" value="2000">
+                    </div>
+                    <div class="goal-input-group">
+                        <label>🥩 Protein (g)</label>
+                        <input type="number" id="goalProtein" min="0" max="500" value="50">
+                    </div>
+                    <div class="goal-input-group">
+                        <label>🫒 Fat (g)</label>
+                        <input type="number" id="goalFat" min="0" max="500" value="65">
+                    </div>
+                    <div class="goal-input-group">
+                        <label>🌾 Carbs (g)</label>
+                        <input type="number" id="goalCarbsInput" min="0" max="1000" value="300">
+                    </div>
+                    <div class="goal-input-group">
+                        <label>🥦 Fiber (g)</label>
+                        <input type="number" id="goalFiber" min="0" max="200" value="25">
+                    </div>
+                    <div class="goal-input-group">
+                        <label>🍬 Sugar (g)</label>
+                        <input type="number" id="goalSugar" min="0" max="500" value="50">
+                    </div>
+                    <button id="saveGoalsBtn" class="btn btn-primary" style="width: 100%; margin-top: 10px;">Save Goals</button>
+                </div>
             </div>
         </div>
     </div>

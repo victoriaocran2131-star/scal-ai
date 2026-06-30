@@ -59,6 +59,20 @@ class FoodScannerApp {
         this.retakeBtn.addEventListener('click', () => this.retakePhoto());
         this.downloadBtn.addEventListener('click', () => this.downloadPhoto());
         
+        // Goals
+        this.goals = { calories: 2000, protein: 50, fat: 65, carbs: 300, fiber: 25, sugar: 50 };
+        this.todayLog = { totalCalories: 0, totalProtein: 0, totalFat: 0, totalCarbs: 0, totalFiber: 0, totalSugar: 0 };
+        
+        document.getElementById('editGoalsBtn').addEventListener('click', () => this.openGoalsModal());
+        document.getElementById('closeGoalsModal').addEventListener('click', () => this.closeGoalsModal());
+        document.getElementById('saveGoalsBtn').addEventListener('click', () => this.saveGoals());
+        
+        document.getElementById('goalsModal').addEventListener('click', (e) => {
+            if (e.target.id === 'goalsModal') this.closeGoalsModal();
+        });
+        
+        this.loadGoals();
+        this.loadTodayLog();
         this.loadHistory();
     }
     
@@ -69,7 +83,6 @@ class FoodScannerApp {
     }
     
     async apiRequest(url, options = {}) {
-        const API_BASE = 'https://scal-ai.onrender.com';
         const fullUrl = url.startsWith('http') ? url : `${API_BASE}${url}`;
         
         const headers = {
@@ -81,17 +94,30 @@ class FoodScannerApp {
             headers['Content-Type'] = 'application/json';
         }
         
-        const response = await fetch(fullUrl, {
-            ...options,
-            headers
-        });
-        
-        if (response.status === 401 || response.status === 403) {
-            this.signOut();
+        try {
+            const response = await fetch(fullUrl, {
+                ...options,
+                headers
+            });
+            
+            if (response.status === 401 || response.status === 403) {
+                const data = await response.json().catch(() => ({}));
+                
+                if (data.requiresSubscription) {
+                    window.location.href = 'subscription.html';
+                    return null;
+                }
+                
+                this.signOut();
+                return null;
+            }
+            
+            return response.json();
+        } catch (error) {
+            console.log('Network error, retrying...');
+            await new Promise(r => setTimeout(r, 1000));
             return null;
         }
-        
-        return response.json();
     }
     
     async startCamera() {
@@ -257,6 +283,9 @@ class FoodScannerApp {
         document.getElementById('calories').textContent = Math.round(data.calories * multiplier);
         document.getElementById('protein').textContent = (data.protein * multiplier).toFixed(1);
         document.getElementById('fat').textContent = (data.fat * multiplier).toFixed(1);
+        document.getElementById('carbs').textContent = (data.carbs * multiplier).toFixed(1);
+        document.getElementById('fiber').textContent = (data.fiber * multiplier).toFixed(1);
+        document.getElementById('sugar').textContent = (data.sugar * multiplier).toFixed(1);
     }
     
     updateDigestionDisplay(data) {
@@ -288,6 +317,9 @@ class FoodScannerApp {
             calories: Math.round(this.currentFood.calories * this.currentPortion),
             protein: (this.currentFood.protein * this.currentPortion).toFixed(1),
             fat: (this.currentFood.fat * this.currentPortion).toFixed(1),
+            carbs: (this.currentFood.carbs * this.currentPortion).toFixed(1),
+            fiber: (this.currentFood.fiber * this.currentPortion).toFixed(1),
+            sugar: (this.currentFood.sugar * this.currentPortion).toFixed(1),
             digestion: this.currentFood.digestion,
             image: this.lastCapturedImage
         };
@@ -300,6 +332,7 @@ class FoodScannerApp {
             
             if (data && data.success) {
                 this.history.unshift({ id: data.history.id, ...entry });
+                this.loadTodayLog();
             }
         } catch (error) {
             console.error('Failed to save to history:', error);
@@ -354,6 +387,100 @@ class FoodScannerApp {
         this.foodResults.style.display = 'none';
         this.errorMsg.style.display = 'block';
         document.getElementById('errorText').textContent = message;
+    }
+    
+    async loadGoals() {
+        try {
+            const data = await this.apiRequest('/api/goals');
+            if (data && data.success) {
+                this.goals = data.goals;
+                this.updateGoalsDisplay();
+            }
+        } catch (error) {
+            console.error('Failed to load goals:', error);
+        }
+    }
+    
+    async loadTodayLog() {
+        try {
+            const data = await this.apiRequest('/api/daily-logs/today');
+            if (data && data.success) {
+                this.todayLog = data.log;
+                this.updateGoalsProgress();
+            }
+        } catch (error) {
+            console.error('Failed to load today log:', error);
+        }
+    }
+    
+    updateGoalsDisplay() {
+        document.getElementById('caloriesGoal').textContent = this.goals.calories;
+        document.getElementById('proteinGoal').textContent = this.goals.protein;
+        document.getElementById('fatGoal').textContent = this.goals.fat;
+        document.getElementById('carbsGoal').textContent = this.goals.carbs;
+        
+        document.getElementById('goalCalories').value = this.goals.calories;
+        document.getElementById('goalProtein').value = this.goals.protein;
+        document.getElementById('goalFat').value = this.goals.fat;
+        document.getElementById('goalCarbsInput').value = this.goals.carbs;
+        document.getElementById('goalFiber').value = this.goals.fiber;
+        document.getElementById('goalSugar').value = this.goals.sugar;
+    }
+    
+    updateGoalsProgress() {
+        const consumed = this.todayLog;
+        const goals = this.goals;
+        
+        document.getElementById('caloriesConsumed').textContent = Math.round(consumed.totalCalories || 0);
+        document.getElementById('proteinConsumed').textContent = (consumed.totalProtein || 0).toFixed(1);
+        document.getElementById('fatConsumed').textContent = (consumed.totalFat || 0).toFixed(1);
+        document.getElementById('carbsConsumed').textContent = (consumed.totalCarbs || 0).toFixed(1);
+        
+        const calPercent = Math.min(((consumed.totalCalories || 0) / goals.calories) * 100, 100);
+        const protPercent = Math.min(((consumed.totalProtein || 0) / goals.protein) * 100, 100);
+        const fatPercent = Math.min(((consumed.totalFat || 0) / goals.fat) * 100, 100);
+        const carbsPercent = Math.min(((consumed.totalCarbs || 0) / goals.carbs) * 100, 100);
+        
+        document.getElementById('caloriesBar').style.width = calPercent + '%';
+        document.getElementById('proteinBar').style.width = protPercent + '%';
+        document.getElementById('fatBar').style.width = fatPercent + '%';
+        document.getElementById('carbsBar').style.width = carbsPercent + '%';
+    }
+    
+    openGoalsModal() {
+        document.getElementById('goalsModal').style.display = 'flex';
+    }
+    
+    closeGoalsModal() {
+        document.getElementById('goalsModal').style.display = 'none';
+    }
+    
+    async saveGoals() {
+        const goals = {
+            calories: parseInt(document.getElementById('goalCalories').value) || 2000,
+            protein: parseInt(document.getElementById('goalProtein').value) || 50,
+            fat: parseInt(document.getElementById('goalFat').value) || 65,
+            carbs: parseInt(document.getElementById('goalCarbsInput').value) || 300,
+            fiber: parseInt(document.getElementById('goalFiber').value) || 25,
+            sugar: parseInt(document.getElementById('goalSugar').value) || 50
+        };
+        
+        try {
+            const data = await this.apiRequest('/api/goals', {
+                method: 'PUT',
+                body: JSON.stringify(goals)
+            });
+            
+            if (data && data.success) {
+                this.goals = data.goals;
+                this.updateGoalsDisplay();
+                this.updateGoalsProgress();
+                this.closeGoalsModal();
+                this.showNotification('Goals saved!');
+            }
+        } catch (error) {
+            console.error('Failed to save goals:', error);
+        }
     }
     
     capitalizeWords(str) {

@@ -4,13 +4,17 @@
   "webDir": "www",
   "server": {
     "androidScheme": "https",
-    "url": "https://scal-ai.onrender.com",
+    "url": "https://scal-ai-pbu8.onrender.com",
     "cleartext": false,
     "allowNavigation": ["*"]
   },
   "plugins": {
     "Camera": {
       "permissions": ["camera"]
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_notification",
+      "iconColor": "#c9a227"
     }
   }
 }

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scal AI - Notifications</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1>🔔 Meal Reminders</h1>
+            <p>Never forget to log your meals</p>
+        </header>
+
+        <div class="history-controls">
+            <button id="backBtn" class="btn btn-secondary">
+                <span>←</span> Back to Scanner
+            </button>
+        </div>
+
+        <div class="notification-settings">
+            <div class="notif-toggle-section">
+                <div class="notif-toggle-info">
+                    <span class="notif-icon">🔔</span>
+                    <div>
+                        <h4>Enable Reminders</h4>
+                        <p>Get notified to log your meals</p>
+                    </div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="enableNotifications">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+
+            <div class="reminder-list" id="reminderList">
+                <div class="reminder-item" data-type="breakfast">
+                    <div class="reminder-info">
+                        <span class="reminder-icon">🌅</span>
+                        <div>
+                            <h4>Breakfast</h4>
+                            <p id="breakfastTime">8:00 AM</p>
+                        </div>
+                    </div>
+                    <div class="reminder-controls">
+                        <input type="time" id="breakfastTimeInput" value="08:00" class="time-input">
+                        <label class="toggle-switch small">
+                            <input type="checkbox" id="breakfastEnabled" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="reminder-item" data-type="lunch">
+                    <div class="reminder-info">
+                        <span class="reminder-icon">☀️</span>
+                        <div>
+                            <h4>Lunch</h4>
+                            <p id="lunchTime">12:00 PM</p>
+                        </div>
+                    </div>
+                    <div class="reminder-controls">
+                        <input type="time" id="lunchTimeInput" value="12:00" class="time-input">
+                        <label class="toggle-switch small">
+                            <input type="checkbox" id="lunchEnabled" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="reminder-item" data-type="dinner">
+                    <div class="reminder-info">
+                        <span class="reminder-icon">🌙</span>
+                        <div>
+                            <h4>Dinner</h4>
+                            <p id="dinnerTime">7:00 PM</p>
+                        </div>
+                    </div>
+                    <div class="reminder-controls">
+                        <input type="time" id="dinnerTimeInput" value="19:00" class="time-input">
+                        <label class="toggle-switch small">
+                            <input type="checkbox" id="dinnerEnabled" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="reminder-item" data-type="snack">
+                    <div class="reminder-info">
+                        <span class="reminder-icon">🍎</span>
+                        <div>
+                            <h4>Snack Check</h4>
+                            <p id="snackTime">3:00 PM</p>
+                        </div>
+                    </div>
+                    <div class="reminder-controls">
+                        <input type="time" id="snackTimeInput" value="15:00" class="time-input">
+                        <label class="toggle-switch small">
+                            <input type="checkbox" id="snackEnabled">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <button id="saveReminders" class="btn btn-primary" style="width: 100%; margin-top: 20px;">
+                <span>💾</span> Save Reminders
+            </button>
+
+            <button id="testNotification" class="btn btn-secondary" style="width: 100%; margin-top: 10px;">
+                <span>🧪</span> Test Notification
+            </button>
+        </div>
+    </div>
+
+    <script type="module" src="notifications.js"></script>
+</body>
+</html>

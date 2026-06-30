@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scal AI - Scan to Open</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0a0a0f;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            text-align: center;
+            max-width: 500px;
+        }
+        .logo { font-size: 4rem; margin-bottom: 10px; }
+        h1 {
+            font-size: 2rem;
+            background: linear-gradient(135deg, #c9a227, #f4d03f);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+        .subtitle { color: #666; margin-bottom: 30px; }
+        .qr-box {
+            background: #fff;
+            border-radius: 20px;
+            padding: 30px;
+            display: inline-block;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 60px rgba(201, 162, 39, 0.2);
+        }
+        #qrcode { width: 250px; height: 250px; }
+        .url {
+            background: rgba(201, 162, 39, 0.1);
+            border: 1px solid rgba(201, 162, 39, 0.2);
+            border-radius: 12px;
+            padding: 14px 20px;
+            color: #c9a227;
+            font-size: 0.95rem;
+            word-break: break-all;
+            margin-bottom: 20px;
+        }
+        .instructions {
+            color: #888;
+            font-size: 0.85rem;
+            line-height: 1.8;
+        }
+        .instructions strong { color: #c9a227; }
+        .note {
+            margin-top: 20px;
+            padding: 16px;
+            background: rgba(220, 53, 69, 0.1);
+            border: 1px solid rgba(220, 53, 69, 0.2);
+            border-radius: 12px;
+            color: #dc3545;
+            font-size: 0.85rem;
+        }
+        .deploy-btn {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 14px 30px;
+            background: linear-gradient(135deg, #c9a227, #d4af37);
+            color: #0a0a0f;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+        .deploy-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(201, 162, 39, 0.3); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🍽️</div>
+        <h1>Scal AI</h1>
+        <p class="subtitle">Scan to open on your iPhone</p>
+        
+        <div class="qr-box">
+            <div id="qrcode"></div>
+        </div>
+        
+        <div class="url" id="appUrl">https://scal-ai.onrender.com</div>
+        
+        <div class="instructions">
+            <p><strong>How to use:</strong></p>
+            <p>1. Open your iPhone <strong>Camera</strong> app</p>
+            <p>2. Point at the QR code above</p>
+            <p>3. Tap the notification to open in Safari</p>
+            <p>4. Tap <strong>Share</strong> → <strong>Add to Home Screen</strong></p>
+            <p>5. Use it like a native app!</p>
+        </div>
+        
+        <div class="note" id="serverNote" style="display: none;">
+            ⚠️ Cloud server is sleeping. You need to deploy it first.<br>
+            <a href="https://dashboard.render.com" target="_blank" style="color: #c9a227;">Open Render Dashboard →</a>
+        </div>
+        
+        <a href="https://dashboard.render.com" target="_blank" class="deploy-btn">Deploy to Render</a>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script>
+        const url = 'https://scal-ai.onrender.com';
+        
+        new QRCode(document.getElementById('qrcode'), {
+            text: url,
+            width: 250,
+            height: 250,
+            colorDark: '#0a0a0f',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.H
+        });
+        
+        // Check if server is awake
+        fetch(url, { method: 'HEAD', mode: 'no-cors' })
+            .then(() => {})
+            .catch(() => {
+                document.getElementById('serverNote').style.display = 'block';
+            });
+    </script>
+</body>
+</html>

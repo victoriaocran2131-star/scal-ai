@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scal AI - Sign In</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="auth-page">
     <div class="auth-container">
@@ -13,6 +14,13 @@
                 <div class="auth-logo">🍽️</div>
                 <h1>Welcome Back</h1>
                 <p>Sign in to continue to Scal AI</p>
+            </div>
+
+            <div id="g_id_onload" data-callback="handleGoogleCredential"></div>
+            <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline" data-text="signin_with" data-size="large" data-width="100%" style="margin-bottom: 16px;"></div>
+
+            <div class="auth-divider">
+                <span>or sign in with email</span>
             </div>
 
             <form class="auth-form" id="signinForm">
@@ -39,10 +47,6 @@
                 <div class="error-message" id="errorMessage" style="display: none;"></div>
             </form>
 
-            <div class="auth-divider">
-                <span>or</span>
-            </div>
-
             <div class="auth-footer">
                 <p>Don't have an account? <a href="signup.html">Create Account</a></p>
             </div>
@@ -51,7 +55,41 @@
         </div>
     </div>
 
+    <script src="config.js"></script>
     <script>
+        function handleGoogleCredential(response) {
+            fetch(API_BASE + '/api/auth/google', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ credential: response.credential })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    localStorage.setItem('scalai_token', data.token);
+                    localStorage.setItem('scalai_user', JSON.stringify(data.user));
+                    
+                    if (data.hasActiveSubscription) {
+                        localStorage.setItem('hasActiveSubscription', 'true');
+                    }
+                    
+                    if (data.requiresSubscription) {
+                        window.location.href = 'subscription.html';
+                    } else {
+                        window.location.href = 'index.html';
+                    }
+                } else {
+                    document.getElementById('errorMessage').textContent = data.error || 'Google sign-in failed';
+                    document.getElementById('errorMessage').style.display = 'block';
+                }
+            })
+            .catch(() => {
+                document.getElementById('errorMessage').textContent = 'Connection failed. Please try again.';
+                document.getElementById('errorMessage').style.display = 'block';
+            });
+        }
+        
+        // Email sign-in
         document.getElementById('signinForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -66,8 +104,7 @@
             submitBtn.textContent = 'Signing In...';
             
             try {
-                const API_BASE = 'https://scal-ai.onrender.com';
-                const response = await fetch(`${API_BASE}/api/auth/signin`, {
+                const response = await fetch(API_BASE + '/api/auth/signin', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
@@ -79,15 +116,23 @@
                     throw new Error(data.error || 'Failed to sign in');
                 }
                 
-                // Store token and user data
                 localStorage.setItem('scalai_token', data.token);
                 localStorage.setItem('scalai_user', JSON.stringify(data.user));
                 
-                // Redirect to main app
-                window.location.href = 'index.html';
+                if (data.hasActiveSubscription) {
+                    localStorage.setItem('hasActiveSubscription', 'true');
+                } else {
+                    localStorage.removeItem('hasActiveSubscription');
+                }
+                
+                if (data.requiresSubscription) {
+                    window.location.href = 'subscription.html';
+                } else {
+                    window.location.href = 'index.html';
+                }
                 
             } catch (error) {
-                errorMessage.textContent = error.message;
+                errorMessage.textContent = error.message || 'Connection failed. Please try again.';
                 errorMessage.style.display = 'block';
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Sign In';

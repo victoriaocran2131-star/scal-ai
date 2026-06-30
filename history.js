@@ -42,19 +42,33 @@ class HistoryApp {
             headers['Content-Type'] = 'application/json';
         }
         
-        const response = await fetch(url, {
-            ...options,
-            headers
-        });
+        const fullUrl = url.startsWith('http') ? url : API_BASE + url;
         
-        if (response.status === 401 || response.status === 403) {
-            localStorage.removeItem('scalai_token');
-            localStorage.removeItem('scalai_user');
-            window.location.href = 'signin.html';
+        try {
+            const response = await fetch(fullUrl, {
+                ...options,
+                headers
+            });
+            
+            if (response.status === 401 || response.status === 403) {
+                const data = await response.json().catch(() => ({}));
+                
+                if (data.requiresSubscription) {
+                    window.location.href = 'subscription.html';
+                    return null;
+                }
+                
+                localStorage.removeItem('scalai_token');
+                localStorage.removeItem('scalai_user');
+                window.location.href = 'signin.html';
+                return null;
+            }
+            
+            return response.json();
+        } catch (error) {
+            console.log('Network error');
             return null;
         }
-        
-        return response.json();
     }
     
     setFilter(btn) {
@@ -86,12 +100,18 @@ class HistoryApp {
         const totals = this.filteredHistory.reduce((acc, item) => ({
             calories: acc.calories + (item.calories || 0),
             protein: acc.protein + parseFloat(item.protein || 0),
-            fat: acc.fat + parseFloat(item.fat || 0)
-        }), { calories: 0, protein: 0, fat: 0 });
+            fat: acc.fat + parseFloat(item.fat || 0),
+            carbs: acc.carbs + parseFloat(item.carbs || 0),
+            fiber: acc.fiber + parseFloat(item.fiber || 0),
+            sugar: acc.sugar + parseFloat(item.sugar || 0)
+        }), { calories: 0, protein: 0, fat: 0, carbs: 0, fiber: 0, sugar: 0 });
         
         document.getElementById('statCalories').textContent = Math.round(totals.calories);
         document.getElementById('statProtein').textContent = totals.protein.toFixed(1) + 'g';
         document.getElementById('statFat').textContent = totals.fat.toFixed(1) + 'g';
+        document.getElementById('statCarbs').textContent = totals.carbs.toFixed(1) + 'g';
+        document.getElementById('statFiber').textContent = totals.fiber.toFixed(1) + 'g';
+        document.getElementById('statSugar').textContent = totals.sugar.toFixed(1) + 'g';
         document.getElementById('statMeals').textContent = this.filteredHistory.length;
     }
     
@@ -114,6 +134,7 @@ class HistoryApp {
                 </div>
                 <div class="history-card-content">
                     <div class="history-card-header">
+                        <div class="history-card-food">${this.capitalizeWords(item.foodName)}</div>
                         <div class="history-card-time">${this.formatTime(item.createdAt)}</div>
                     </div>
                     <div class="history-card-nutrition">
@@ -128,6 +149,10 @@ class HistoryApp {
                         <div class="nutrition-pill fat">
                             <span class="pill-icon">🫒</span>
                             <span class="pill-value">${item.fat}g</span>
+                        </div>
+                        <div class="nutrition-pill carbs">
+                            <span class="pill-icon">🌾</span>
+                            <span class="pill-value">${item.carbs || 0}g</span>
                         </div>
                     </div>
                     <div class="history-card-details">
@@ -175,8 +200,11 @@ class HistoryApp {
             const totals = items.reduce((acc, item) => ({
                 calories: acc.calories + (item.calories || 0),
                 protein: acc.protein + parseFloat(item.protein || 0),
-                fat: acc.fat + parseFloat(item.fat || 0)
-            }), { calories: 0, protein: 0, fat: 0 });
+                fat: acc.fat + parseFloat(item.fat || 0),
+                carbs: acc.carbs + parseFloat(item.carbs || 0),
+                fiber: acc.fiber + parseFloat(item.fiber || 0),
+                sugar: acc.sugar + parseFloat(item.sugar || 0)
+            }), { calories: 0, protein: 0, fat: 0, carbs: 0, fiber: 0, sugar: 0 });
             
             return `
                 <div class="daily-card">
@@ -197,10 +225,15 @@ class HistoryApp {
                             <span class="total-icon">🫒</span>
                             <span class="total-value">${totals.fat.toFixed(1)}g</span>
                         </div>
+                        <div class="daily-total">
+                            <span class="total-icon">🌾</span>
+                            <span class="total-value">${totals.carbs.toFixed(1)}g</span>
+                        </div>
                     </div>
                     <div class="daily-items">
                         ${items.map(item => `
                             <div class="daily-item">
+                                <span class="item-name">${this.capitalizeWords(item.foodName)}</span>
                                 <span class="item-cal">${item.calories} cal</span>
                             </div>
                         `).join('')}

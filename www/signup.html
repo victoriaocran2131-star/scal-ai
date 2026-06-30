@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scal AI - Create Account</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="auth-page">
     <div class="auth-container">
@@ -13,6 +14,13 @@
                 <div class="auth-logo">🍽️</div>
                 <h1>Create Account</h1>
                 <p>Join Scal AI and start tracking your nutrition</p>
+            </div>
+
+            <div id="g_id_onload" data-callback="handleGoogleCredential"></div>
+            <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline" data-text="signup_with" data-size="large" data-width="100%" style="margin-bottom: 16px;"></div>
+
+            <div class="auth-divider">
+                <span>or sign up with email</span>
             </div>
 
             <form class="auth-form" id="signupForm">
@@ -55,7 +63,42 @@
         </div>
     </div>
 
+    <script src="config.js"></script>
     <script>
+        function handleGoogleCredential(response) {
+            fetch(API_BASE + '/api/auth/google', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ credential: response.credential })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    localStorage.setItem('scalai_token', data.token);
+                    localStorage.setItem('scalai_user', JSON.stringify(data.user));
+                    
+                    if (data.hasActiveSubscription) {
+                        localStorage.setItem('hasActiveSubscription', 'true');
+                    }
+                    
+                    const selectedPlan = localStorage.getItem('selectedPlan');
+                    if (selectedPlan || data.requiresSubscription) {
+                        window.location.href = 'subscription.html';
+                    } else {
+                        window.location.href = 'index.html';
+                    }
+                } else {
+                    document.getElementById('errorMessage').textContent = data.error || 'Google sign-up failed';
+                    document.getElementById('errorMessage').style.display = 'block';
+                }
+            })
+            .catch(() => {
+                document.getElementById('errorMessage').textContent = 'Connection failed. Please try again.';
+                document.getElementById('errorMessage').style.display = 'block';
+            });
+        }
+        
+        // Email sign-up
         document.getElementById('signupForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -94,8 +137,7 @@
             submitBtn.textContent = 'Creating Account...';
             
             try {
-                const API_BASE = 'https://scal-ai.onrender.com';
-                const response = await fetch(`${API_BASE}/api/auth/signup`, {
+                const response = await fetch(API_BASE + '/api/auth/signup', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ fullName, email, password })
@@ -107,19 +149,24 @@
                     throw new Error(data.error || 'Failed to create account');
                 }
                 
-                // Store token and user data
                 localStorage.setItem('scalai_token', data.token);
                 localStorage.setItem('scalai_user', JSON.stringify(data.user));
                 
                 successMessage.textContent = 'Account created successfully! Redirecting...';
                 successMessage.style.display = 'block';
                 
+                const selectedPlan = localStorage.getItem('selectedPlan');
+                
                 setTimeout(() => {
-                    window.location.href = 'index.html';
+                    if (selectedPlan || !data.hasActiveSubscription) {
+                        window.location.href = 'subscription.html';
+                    } else {
+                        window.location.href = 'index.html';
+                    }
                 }, 1500);
                 
             } catch (error) {
-                errorMessage.textContent = error.message;
+                errorMessage.textContent = error.message || 'Connection failed. Please try again.';
                 errorMessage.style.display = 'block';
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Create Account';
