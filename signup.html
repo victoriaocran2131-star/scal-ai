@@ -2,10 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1, user-scalable=no">
     <title>Scal AI - Create Account</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="auth-page">
     <div class="auth-container">
@@ -16,8 +15,10 @@
                 <p>Join Scal AI and start tracking your nutrition</p>
             </div>
 
-            <div id="g_id_onload" data-callback="handleGoogleCredential"></div>
-            <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline" data-text="signup_with" data-size="large" data-width="100%" style="margin-bottom: 16px;"></div>
+            <button class="google-btn" id="googleBtn" type="button">
+                <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+                <span>Continue with Google</span>
+            </button>
 
             <div class="auth-divider">
                 <span>or sign up with email</span>
@@ -64,7 +65,25 @@
     </div>
 
     <script src="config.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer onerror="console.log('Google library blocked - using fallback')"></script>
     <script>
+        function initGoogleSignIn() {
+            if (typeof google !== 'undefined' && google.accounts) {
+                google.accounts.id.initialize({
+                    client_id: 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com',
+                    callback: handleGoogleCredential
+                });
+                google.accounts.id.renderButton(
+                    document.getElementById('googleBtn'),
+                    { type: 'standard', theme: 'outline', size: 'large', width: '100%' }
+                );
+            } else {
+                document.getElementById('googleBtn').addEventListener('click', function() {
+                    showError('Google Sign-In requires setup. Use email to sign up.');
+                });
+            }
+        }
+        
         function handleGoogleCredential(response) {
             fetch(API_BASE + '/api/auth/google', {
                 method: 'POST',
@@ -81,36 +100,36 @@
                         localStorage.setItem('hasActiveSubscription', 'true');
                     }
                     
-                    const selectedPlan = localStorage.getItem('selectedPlan');
+                    var selectedPlan = localStorage.getItem('selectedPlan');
                     if (selectedPlan || data.requiresSubscription) {
                         window.location.href = 'subscription.html';
                     } else {
                         window.location.href = 'index.html';
                     }
                 } else {
-                    document.getElementById('errorMessage').textContent = data.error || 'Google sign-up failed';
-                    document.getElementById('errorMessage').style.display = 'block';
+                    showError(data.error || 'Google sign-up failed');
                 }
             })
-            .catch(() => {
-                document.getElementById('errorMessage').textContent = 'Connection failed. Please try again.';
-                document.getElementById('errorMessage').style.display = 'block';
-            });
+            .catch(function() { showError('Connection failed. Please try again.'); });
         }
         
-        // Email sign-up
+        function showError(msg) {
+            var el = document.getElementById('errorMessage');
+            el.textContent = msg;
+            el.style.display = 'block';
+        }
+        
         document.getElementById('signupForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const fullName = document.getElementById('fullName').value.trim();
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-            const terms = document.getElementById('terms').checked;
-            const submitBtn = document.getElementById('submitBtn');
-            
-            const errorMessage = document.getElementById('errorMessage');
-            const successMessage = document.getElementById('successMessage');
+            var fullName = document.getElementById('fullName').value.trim();
+            var email = document.getElementById('email').value.trim();
+            var password = document.getElementById('password').value;
+            var confirmPassword = document.getElementById('confirmPassword').value;
+            var terms = document.getElementById('terms').checked;
+            var submitBtn = document.getElementById('submitBtn');
+            var errorMessage = document.getElementById('errorMessage');
+            var successMessage = document.getElementById('successMessage');
             
             errorMessage.style.display = 'none';
             successMessage.style.display = 'none';
@@ -137,13 +156,13 @@
             submitBtn.textContent = 'Creating Account...';
             
             try {
-                const response = await fetch(API_BASE + '/api/auth/signup', {
+                var response = await fetch(API_BASE + '/api/auth/signup', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ fullName, email, password })
+                    body: JSON.stringify({ fullName: fullName, email: email, password: password })
                 });
                 
-                const data = await response.json();
+                var data = await response.json();
                 
                 if (!response.ok) {
                     throw new Error(data.error || 'Failed to create account');
@@ -155,9 +174,9 @@
                 successMessage.textContent = 'Account created successfully! Redirecting...';
                 successMessage.style.display = 'block';
                 
-                const selectedPlan = localStorage.getItem('selectedPlan');
+                var selectedPlan = localStorage.getItem('selectedPlan');
                 
-                setTimeout(() => {
+                setTimeout(function() {
                     if (selectedPlan || !data.hasActiveSubscription) {
                         window.location.href = 'subscription.html';
                     } else {
@@ -172,6 +191,8 @@
                 submitBtn.textContent = 'Create Account';
             }
         });
+        
+        setTimeout(initGoogleSignIn, 500);
     </script>
 </body>
 </html>
