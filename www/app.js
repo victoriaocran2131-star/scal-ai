@@ -47,11 +47,13 @@ class FoodScannerApp {
         this.uploadBtn.addEventListener('click', () => this.fileInput.click());
         this.fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
         
-        this.foodSearch.addEventListener('input', (e) => this.handleSearch(e.target.value));
-        this.foodSearch.addEventListener('focus', (e) => this.handleSearch(e.target.value));
+        if (this.foodSearch) {
+            this.foodSearch.addEventListener('input', (e) => this.handleSearch(e.target.value));
+            this.foodSearch.addEventListener('focus', (e) => this.handleSearch(e.target.value));
+        }
         
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('.search-container')) {
+            if (this.suggestions && !e.target.closest('.search-container')) {
                 this.suggestions.classList.remove('active');
             }
         });
@@ -340,6 +342,7 @@ class FoodScannerApp {
     }
     
     handleSearch(query) {
+        if (!this.suggestions) return;
         if (query.length < 1) {
             this.suggestions.classList.remove('active');
             return;

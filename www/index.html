@@ -7,64 +7,37 @@
     <link rel="stylesheet" href="style.css">
     <script src="config.js"></script>
     <script>
-        // Check if user is authenticated
         const token = localStorage.getItem('scalai_token');
         if (!token) {
             window.location.href = 'signin.html';
         }
     </script>
     <script>
-        // Check subscription status
         async function checkSubscription() {
             const token = localStorage.getItem('scalai_token');
             if (!token) return;
-            
             try {
                 const response = await fetch(API_BASE + '/api/subscription/check', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await response.json();
-                
                 if (!data.hasActiveSubscription) {
                     localStorage.removeItem('hasActiveSubscription');
                     window.location.href = 'subscription.html';
                 } else {
                     localStorage.setItem('hasActiveSubscription', 'true');
                 }
-            } catch (error) {
-                // Server unreachable - allow access if previously verified
-            }
+            } catch (error) {}
         }
-        
         document.addEventListener('DOMContentLoaded', checkSubscription);
     </script>
 </head>
 <body>
-    <div class="app-container">
+    <div class="app-container has-bottom-nav">
         <header class="app-header">
             <div class="header-content">
                 <h1>🍽️ Scal AI</h1>
                 <p id="userGreeting">Scan food, track calories & nutrients</p>
-            </div>
-            <div class="header-links">
-                <a href="charts.html" class="about-link">
-                    <span>📊</span> Charts
-                </a>
-                <a href="notifications.html" class="about-link">
-                    <span>🔔</span> Reminders
-                </a>
-                <a href="subscription.html" class="about-link subscription-link">
-                    <span>⭐</span> Plan
-                </a>
-                <a href="about.html" class="about-link">
-                    <span>ℹ️</span> About
-                </a>
-                <a href="history.html" class="history-link">
-                    <span>📋</span> History
-                </a>
-                <button id="signoutBtn" class="signout-link">
-                    <span>🚪</span> Sign Out
-                </button>
             </div>
         </header>
 
@@ -174,15 +147,7 @@
 
             <div class="error-msg" id="errorMsg" style="display: none;">
                 <span>⚠️</span>
-                <p id="errorText">Could not identify food. Please try again or select manually.</p>
-            </div>
-        </div>
-
-        <div class="manual-section">
-            <h3>Or select food manually:</h3>
-            <div class="search-container">
-                <input type="text" id="foodSearch" placeholder="Search for food (e.g., apple, pizza, rice)..." autocomplete="off">
-                <div class="suggestions" id="suggestions"></div>
+                <p id="errorText">Could not identify food. Please try again.</p>
             </div>
         </div>
 
@@ -279,6 +244,33 @@
             </div>
         </div>
     </div>
+
+    <nav class="bottom-nav">
+        <a href="charts.html" class="bottom-nav-item">
+            <span class="bottom-nav-icon">📊</span>
+            <span class="bottom-nav-label">Charts</span>
+        </a>
+        <a href="history.html" class="bottom-nav-item">
+            <span class="bottom-nav-icon">📋</span>
+            <span class="bottom-nav-label">History</span>
+        </a>
+        <a href="notifications.html" class="bottom-nav-item">
+            <span class="bottom-nav-icon">🔔</span>
+            <span class="bottom-nav-label">Reminders</span>
+        </a>
+        <a href="subscription.html" class="bottom-nav-item">
+            <span class="bottom-nav-icon">⭐</span>
+            <span class="bottom-nav-label">Plan</span>
+        </a>
+        <a href="about.html" class="bottom-nav-item">
+            <span class="bottom-nav-icon">ℹ️</span>
+            <span class="bottom-nav-label">About</span>
+        </a>
+        <button id="signoutBtn" class="bottom-nav-item bottom-nav-btn">
+            <span class="bottom-nav-icon">🚪</span>
+            <span class="bottom-nav-label">Sign Out</span>
+        </button>
+    </nav>
 
     <script src="foodDatabase.js"></script>
     <script src="app.js"></script>
