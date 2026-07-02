@@ -523,6 +523,35 @@ app.get('/api/stats', authenticateToken, (req, res) => {
 
 // ==================== SUBSCRIPTION ROUTES ====================
 
+// Check app access (subscription required)
+app.get('/api/subscriptions/check-access', authenticateToken, (req, res) => {
+    try {
+        const db = loadDB();
+        const user = db.users.find(u => u.id === req.user.id);
+        
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        const subscription = user.subscription;
+        const hasAccess = subscription && subscription.active && new Date(subscription.expiresAt) > new Date();
+        
+        res.json({
+            success: true,
+            hasAccess: hasAccess,
+            subscription: subscription ? {
+                active: subscription.active,
+                billing: subscription.billing,
+                expiresAt: subscription.expiresAt
+            } : null
+        });
+        
+    } catch (error) {
+        console.error('Check access error:', error);
+        res.status(500).json({ error: 'Failed to check access' });
+    }
+});
+
 // Get subscription status
 app.get('/api/subscriptions/status', authenticateToken, (req, res) => {
     try {
