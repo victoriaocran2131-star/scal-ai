@@ -196,25 +196,36 @@ class FoodScannerApp {
     
     async simulateAnalysis() {
         const steps = [
-            { progress: '25%', text: 'Detecting food items...' },
-            { progress: '50%', text: 'Analyzing nutrition...' },
-            { progress: '75%', text: 'Calculating digestion...' },
+            { progress: '20%', text: 'Detecting food items...' },
+            { progress: '45%', text: 'Analyzing image...' },
+            { progress: '70%', text: 'Verifying food item...' },
+            { progress: '90%', text: 'Calculating nutrition...' },
             { progress: '100%', text: 'Analysis complete!' }
         ];
         
         for (const step of steps) {
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise(resolve => setTimeout(resolve, 450));
             this.scanProgressBar.style.width = step.progress;
             this.loadingText.textContent = step.text;
         }
         
         await new Promise(resolve => setTimeout(resolve, 300));
         
+        // Simulate non-food detection (~15% chance)
+        const isNotFood = Math.random() < 0.15;
+        
+        this.loading.style.display = 'none';
+        
+        if (isNotFood) {
+            this.showNotFoodError();
+            this.stopCamera();
+            return;
+        }
+        
         // Get random food from database
         const foods = Object.keys(foodDatabase);
         const randomFood = foods[Math.floor(Math.random() * foods.length)];
         
-        this.loading.style.display = 'none';
         this.showFoodResult(randomFood, foodDatabase[randomFood]);
         
         // Auto-add to history
@@ -222,6 +233,26 @@ class FoodScannerApp {
         
         // Stop camera after scan
         this.stopCamera();
+    }
+    
+    showNotFoodError() {
+        this.foodResults.style.display = 'none';
+        this.errorMsg.style.display = 'block';
+        this.errorMsg.innerHTML = `
+            <div class="error-content">
+                <div class="error-icon">⚠️</div>
+                <h3>Not Food Detected</h3>
+                <p>Sorry, it doesn't look like there's any food or drink in this image. Please try scanning a food item or use manual search below.</p>
+                <button onclick="foodApp.clearError()" class="try-again-btn">Try Again</button>
+            </div>
+        `;
+    }
+    
+    clearError() {
+        this.errorMsg.style.display = 'none';
+        this.capturedSection.style.display = 'none';
+        document.getElementById('cameraSection').style.display = 'block';
+        this.startCamera();
     }
     
     showFoodResult(name, data) {

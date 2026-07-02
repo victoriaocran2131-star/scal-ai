@@ -503,6 +503,49 @@ body::before {
     font-size: 0.9rem;
 }
 
+.error-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.error-content .error-icon {
+    font-size: 3rem;
+    margin-bottom: 5px;
+}
+
+.error-content h3 {
+    color: #dc3545;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.error-content p {
+    color: #888;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    max-width: 300px;
+}
+
+.try-again-btn {
+    margin-top: 10px;
+    padding: 10px 24px;
+    background: rgba(220, 53, 69, 0.15);
+    border: 1px solid rgba(220, 53, 69, 0.3);
+    border-radius: 12px;
+    color: #dc3545;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.try-again-btn:hover {
+    background: rgba(220, 53, 69, 0.25);
+}
+
 /* Manual Section */
 .manual-section {
     margin-bottom: 25px;
