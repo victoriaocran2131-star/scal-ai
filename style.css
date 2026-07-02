@@ -1844,6 +1844,13 @@ body::before {
     margin-bottom: 60px;
 }
 
+.pricing-cards.single {
+    grid-template-columns: 1fr;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
 .pricing-card {
     background: #18181b;
     border-radius: 20px;
