@@ -178,7 +178,7 @@
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await response.json();
-                if (data.success && data.hasAccess) {
+                if (data.success && (data.hasAccess || data.isAdmin)) {
                     document.getElementById('mainApp').style.display = 'block';
                     document.getElementById('subOverlay').style.display = 'none';
                 } else {

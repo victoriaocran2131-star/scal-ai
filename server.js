@@ -533,12 +533,16 @@ app.get('/api/subscriptions/check-access', authenticateToken, (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
         
+        const adminEmails = ['victoriaocran2131@gmail.com'];
+        const isAdmin = adminEmails.includes(user.email.toLowerCase());
+        
         const subscription = user.subscription;
-        const hasAccess = subscription && subscription.active && new Date(subscription.expiresAt) > new Date();
+        const hasAccess = isAdmin || (subscription && subscription.active && new Date(subscription.expiresAt) > new Date());
         
         res.json({
             success: true,
             hasAccess: hasAccess,
+            isAdmin: isAdmin,
             subscription: subscription ? {
                 active: subscription.active,
                 billing: subscription.billing,
@@ -562,10 +566,14 @@ app.get('/api/subscriptions/status', authenticateToken, (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
         
+        const adminEmails = ['victoriaocran2131@gmail.com'];
+        const isAdmin = adminEmails.includes(user.email.toLowerCase());
+        
         const subscription = user.subscription || null;
         
         res.json({
             success: true,
+            isAdmin: isAdmin,
             subscription: subscription ? {
                 active: subscription.active,
                 billing: subscription.billing,
