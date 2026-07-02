@@ -2682,6 +2682,19 @@ body::before {
     color: #ef4444;
 }
 
+.settings-row.admin-only {
+    background: rgba(201, 162, 39, 0.08);
+    border: 1px solid rgba(201, 162, 39, 0.2);
+}
+
+.settings-row.admin-only .settings-left {
+    color: #c9a227;
+}
+
+.settings-row.admin-only .settings-left svg {
+    color: #c9a227;
+}
+
 /* Sign Out Button */
 .signout-full {
     display: flex;
