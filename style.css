@@ -1208,6 +1208,13 @@ body::before {
     animation: float 3s ease-in-out infinite;
 }
 
+.welcome-logo-img {
+    width: 280px;
+    height: auto;
+    margin-bottom: 20px;
+    animation: float 3s ease-in-out infinite;
+}
+
 @keyframes float {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-15px); }

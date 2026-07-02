@@ -1,47 +1,47 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" width="400" height="120">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 240" width="800" height="240">
   <defs>
     <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#c9a227"/>
-      <stop offset="50%" style="stop-color:#f4d03f"/>
-      <stop offset="100%" style="stop-color:#c9a227"/>
-    </linearGradient>
-    <linearGradient id="iconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#c9a227"/>
-      <stop offset="100%" style="stop-color:#d4af37"/>
+      <stop offset="0%" style="stop-color:#b8941f"/>
+      <stop offset="50%" style="stop-color:#c9a227"/>
+      <stop offset="100%" style="stop-color:#b8941f"/>
     </linearGradient>
   </defs>
   
   <!-- Background -->
-  <rect width="400" height="120" rx="16" fill="#0a0a0f"/>
+  <rect width="800" height="240" rx="20" fill="#ffffff"/>
   
-  <!-- Icon: Plate with fork and knife -->
-  <g transform="translate(30, 60)">
-    <!-- Plate circle -->
-    <circle cx="0" cy="0" r="35" fill="none" stroke="url(#iconGradient)" stroke-width="2.5"/>
-    <circle cx="0" cy="0" r="25" fill="none" stroke="url(#iconGradient)" stroke-width="1" opacity="0.4"/>
-    
-    <!-- Fork -->
-    <g transform="translate(-12, -20)">
-      <line x1="0" y1="0" x2="0" y2="35" stroke="url(#goldGradient)" stroke-width="2" stroke-linecap="round"/>
-      <line x1="-4" y1="0" x2="-4" y2="12" stroke="url(#goldGradient)" stroke-width="1.5" stroke-linecap="round"/>
-      <line x1="0" y1="0" x2="0" y2="12" stroke="url(#goldGradient)" stroke-width="1.5" stroke-linecap="round"/>
-      <line x1="4" y1="0" x2="4" y2="12" stroke="url(#goldGradient)" stroke-width="1.5" stroke-linecap="round"/>
-      <path d="M-4,12 Q-4,16 0,16 Q4,16 4,12" fill="none" stroke="url(#goldGradient)" stroke-width="1.5"/>
-    </g>
-    
-    <!-- Knife -->
-    <g transform="translate(12, -20)">
-      <line x1="0" y1="0" x2="0" y2="35" stroke="url(#goldGradient)" stroke-width="2" stroke-linecap="round"/>
-      <path d="M0,0 Q6,8 0,16" fill="url(#iconGradient)" opacity="0.6"/>
-    </g>
+  <!-- Outer Circle -->
+  <circle cx="120" cy="120" r="85" fill="none" stroke="#c9a227" stroke-width="4"/>
+  
+  <!-- Inner Circle -->
+  <circle cx="120" cy="120" r="68" fill="none" stroke="#c9a227" stroke-width="2" opacity="0.5"/>
+  
+  <!-- Fork -->
+  <g transform="translate(95, 60)">
+    <!-- Fork handle -->
+    <line x1="0" y1="30" x2="0" y2="100" stroke="#c9a227" stroke-width="4" stroke-linecap="round"/>
+    <!-- Fork prongs -->
+    <line x1="-12" y1="0" x2="-12" y2="35" stroke="#c9a227" stroke-width="3" stroke-linecap="round"/>
+    <line x1="0" y1="0" x2="0" y2="35" stroke="#c9a227" stroke-width="3" stroke-linecap="round"/>
+    <line x1="12" y1="0" x2="12" y2="35" stroke="#c9a227" stroke-width="3" stroke-linecap="round"/>
+    <!-- Fork curve -->
+    <path d="M-12,35 Q-12,45 0,45 Q12,45 12,35" fill="none" stroke="#c9a227" stroke-width="3"/>
   </g>
   
-  <!-- Text: SCAL -->
-  <text x="90" y="72" font-family="Arial, Helvetica, sans-serif" font-size="48" font-weight="bold" fill="url(#goldGradient)" letter-spacing="2">SCAL</text>
+  <!-- Knife -->
+  <g transform="translate(145, 60)">
+    <!-- Knife handle -->
+    <line x1="0" y1="30" x2="0" y2="100" stroke="#c9a227" stroke-width="4" stroke-linecap="round"/>
+    <!-- Knife blade -->
+    <path d="M0,0 Q14,20 0,40" fill="#c9a227" opacity="0.7"/>
+  </g>
   
-  <!-- Text: AI -->
-  <text x="235" y="72" font-family="Arial, Helvetica, sans-serif" font-size="48" font-weight="300" fill="#ffffff" letter-spacing="2">AI</text>
+  <!-- SCAL Text -->
+  <text x="240" y="145" font-family="Arial, Helvetica, sans-serif" font-size="90" font-weight="bold" fill="url(#goldGradient)" letter-spacing="4">SCAL</text>
+  
+  <!-- AI Text -->
+  <text x="540" y="145" font-family="Arial, Helvetica, sans-serif" font-size="90" font-weight="400" fill="#1a1a2e" letter-spacing="4">AI</text>
   
   <!-- Tagline -->
-  <text x="200" y="100" font-family="Arial, Helvetica, sans-serif" font-size="10" fill="#666" text-anchor="middle" letter-spacing="4">INTELLIGENT FOOD RECOGNITION</text>
+  <text x="400" y="195" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#999999" text-anchor="middle" letter-spacing="8">INTELLIGENT FOOD RECOGNITION</text>
 </svg>
