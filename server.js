@@ -191,6 +191,105 @@ app.get('/api/auth/profile', authenticateToken, (req, res) => {
     }
 });
 
+// Update profile
+app.put('/api/auth/profile', authenticateToken, async (req, res) => {
+    try {
+        const { fullName, email } = req.body;
+        
+        if (!fullName || !email) {
+            return res.status(400).json({ error: 'Name and email are required' });
+        }
+        
+        const db = loadDB();
+        const userIndex = db.users.findIndex(u => u.id === req.user.id);
+        
+        if (userIndex === -1) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        if (email !== db.users[userIndex].email) {
+            const emailExists = db.users.find(u => u.email === email && u.id !== req.user.id);
+            if (emailExists) {
+                return res.status(400).json({ error: 'Email already in use' });
+            }
+        }
+        
+        db.users[userIndex].fullName = fullName;
+        db.users[userIndex].email = email;
+        saveDB(db);
+        
+        res.json({
+            success: true,
+            message: 'Profile updated',
+            user: { id: db.users[userIndex].id, fullName, email }
+        });
+        
+    } catch (error) {
+        console.error('Update profile error:', error);
+        res.status(500).json({ error: 'Failed to update profile' });
+    }
+});
+
+// Change password
+app.put('/api/auth/password', authenticateToken, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ error: 'All fields are required' });
+        }
+        
+        if (newPassword.length < 6) {
+            return res.status(400).json({ error: 'New password must be at least 6 characters' });
+        }
+        
+        const db = loadDB();
+        const userIndex = db.users.findIndex(u => u.id === req.user.id);
+        
+        if (userIndex === -1) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        const validPassword = await bcrypt.compare(currentPassword, db.users[userIndex].password);
+        if (!validPassword) {
+            return res.status(401).json({ error: 'Current password is incorrect' });
+        }
+        
+        const salt = await bcrypt.genSalt(10);
+        db.users[userIndex].password = await bcrypt.hash(newPassword, salt);
+        saveDB(db);
+        
+        res.json({ success: true, message: 'Password updated successfully' });
+        
+    } catch (error) {
+        console.error('Change password error:', error);
+        res.status(500).json({ error: 'Failed to change password' });
+    }
+});
+
+// Delete account
+app.delete('/api/auth/delete', authenticateToken, (req, res) => {
+    try {
+        const db = loadDB();
+        const userIndex = db.users.findIndex(u => u.id === req.user.id);
+        
+        if (userIndex === -1) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        db.users.splice(userIndex, 1);
+        db.history = db.history.filter(h => h.userId !== req.user.id);
+        db.dailyLogs = db.dailyLogs.filter(l => l.userId !== req.user.id);
+        saveDB(db);
+        
+        res.json({ success: true, message: 'Account deleted successfully' });
+        
+    } catch (error) {
+        console.error('Delete account error:', error);
+        res.status(500).json({ error: 'Failed to delete account' });
+    }
+});
+
 // ==================== SCAN HISTORY ROUTES ====================
 
 // Add scan to history
