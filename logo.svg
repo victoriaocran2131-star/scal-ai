@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" width="400" height="120">
+  <defs>
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#c9a227"/>
+      <stop offset="50%" style="stop-color:#f4d03f"/>
+      <stop offset="100%" style="stop-color:#c9a227"/>
+    </linearGradient>
+    <linearGradient id="iconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#c9a227"/>
+      <stop offset="100%" style="stop-color:#d4af37"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="400" height="120" rx="16" fill="#0a0a0f"/>
+  
+  <!-- Icon: Plate with fork and knife -->
+  <g transform="translate(30, 60)">
+    <!-- Plate circle -->
+    <circle cx="0" cy="0" r="35" fill="none" stroke="url(#iconGradient)" stroke-width="2.5"/>
+    <circle cx="0" cy="0" r="25" fill="none" stroke="url(#iconGradient)" stroke-width="1" opacity="0.4"/>
+    
+    <!-- Fork -->
+    <g transform="translate(-12, -20)">
+      <line x1="0" y1="0" x2="0" y2="35" stroke="url(#goldGradient)" stroke-width="2" stroke-linecap="round"/>
+      <line x1="-4" y1="0" x2="-4" y2="12" stroke="url(#goldGradient)" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="0" y1="0" x2="0" y2="12" stroke="url(#goldGradient)" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="4" y1="0" x2="4" y2="12" stroke="url(#goldGradient)" stroke-width="1.5" stroke-linecap="round"/>
+      <path d="M-4,12 Q-4,16 0,16 Q4,16 4,12" fill="none" stroke="url(#goldGradient)" stroke-width="1.5"/>
+    </g>
+    
+    <!-- Knife -->
+    <g transform="translate(12, -20)">
+      <line x1="0" y1="0" x2="0" y2="35" stroke="url(#goldGradient)" stroke-width="2" stroke-linecap="round"/>
+      <path d="M0,0 Q6,8 0,16" fill="url(#iconGradient)" opacity="0.6"/>
+    </g>
+  </g>
+  
+  <!-- Text: SCAL -->
+  <text x="90" y="72" font-family="Arial, Helvetica, sans-serif" font-size="48" font-weight="bold" fill="url(#goldGradient)" letter-spacing="2">SCAL</text>
+  
+  <!-- Text: AI -->
+  <text x="235" y="72" font-family="Arial, Helvetica, sans-serif" font-size="48" font-weight="300" fill="#ffffff" letter-spacing="2">AI</text>
+  
+  <!-- Tagline -->
+  <text x="200" y="100" font-family="Arial, Helvetica, sans-serif" font-size="10" fill="#666" text-anchor="middle" letter-spacing="4">INTELLIGENT FOOD RECOGNITION</text>
+</svg>
