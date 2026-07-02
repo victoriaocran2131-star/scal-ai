@@ -39,8 +39,11 @@ class FoodScannerApp {
             document.getElementById('userGreeting').textContent = `Welcome, ${this.user.fullName}`;
         }
         
-        // Sign out button
-        document.getElementById('signoutBtn').addEventListener('click', () => this.signOut());
+        // Sign out button - check if element exists
+        const signoutBtn = document.getElementById('signoutBtn');
+        if (signoutBtn) {
+            signoutBtn.addEventListener('click', () => this.signOut());
+        }
         
         this.startBtn.addEventListener('click', () => this.startCamera());
         this.captureBtn.addEventListener('click', () => this.captureAndAnalyze());
@@ -251,7 +254,7 @@ class FoodScannerApp {
     clearError() {
         this.errorMsg.style.display = 'none';
         this.capturedSection.style.display = 'none';
-        document.getElementById('cameraSection').style.display = 'block';
+        document.getElementById('scannerSection').style.display = 'block';
         this.startCamera();
     }
     
@@ -391,6 +394,9 @@ class FoodScannerApp {
     retakePhoto() {
         this.capturedSection.style.display = 'none';
         this.foodResults.style.display = 'none';
+        this.errorMsg.style.display = 'none';
+        document.getElementById('scannerSection').style.display = 'block';
+        this.startCamera();
     }
     
     downloadPhoto() {
@@ -406,6 +412,7 @@ class FoodScannerApp {
 }
 
 // Initialize app when DOM is loaded
+let foodApp;
 document.addEventListener('DOMContentLoaded', () => {
-    const app = new FoodScannerApp();
+    foodApp = new FoodScannerApp();
 });
