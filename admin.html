@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scal AI - Admin Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <script>
+        const token = localStorage.getItem('scalai_token');
+        if (!token) { window.location.href = 'signin.html'; }
+    </script>
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="header-content">
+                <h1>Admin Dashboard</h1>
+                <p>Monitor your app usage and users</p>
+            </div>
+            <div class="header-links">
+                <a href="index.html" class="about-link">
+                    <span>←</span> Back
+                </a>
+            </div>
+        </header>
+
+        <div class="admin-stats">
+            <div class="admin-stat-card">
+                <div class="admin-stat-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <div class="admin-stat-info">
+                    <div class="admin-stat-value" id="totalUsers">0</div>
+                    <div class="admin-stat-label">Total Users</div>
+                </div>
+            </div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-icon premium-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                </div>
+                <div class="admin-stat-info">
+                    <div class="admin-stat-value" id="premiumUsers">0</div>
+                    <div class="admin-stat-label">Premium Users</div>
+                </div>
+            </div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-icon scans-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                </div>
+                <div class="admin-stat-info">
+                    <div class="admin-stat-value" id="totalScans">0</div>
+                    <div class="admin-stat-label">Total Scans</div>
+                </div>
+            </div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-icon calories-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
+                </div>
+                <div class="admin-stat-info">
+                    <div class="admin-stat-value" id="totalCalories">0</div>
+                    <div class="admin-stat-label">Calories Tracked</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="admin-section">
+            <h3 class="section-heading">All Users</h3>
+            <div class="user-list" id="userList">
+                <div class="loading-spinner">Loading...</div>
+            </div>
+        </div>
+
+        <div class="admin-section">
+            <h3 class="section-heading">Recent Activity</h3>
+            <div class="activity-list" id="activityList">
+                <div class="loading-spinner">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function apiRequest(url) {
+            const token = localStorage.getItem('scalai_token');
+            const response = await fetch(url, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.status === 401 || response.status === 403) {
+                window.location.href = 'signin.html';
+                return null;
+            }
+            return response.json();
+        }
+
+        async function loadAdminData() {
+            const data = await apiRequest('/api/admin/users');
+            if (!data || !data.success) {
+                document.getElementById('userList').innerHTML = '<p class="error-text">Access denied. Admin only.</p>';
+                return;
+            }
+
+            const users = data.users;
+            const stats = data.stats;
+
+            document.getElementById('totalUsers').textContent = stats.totalUsers;
+            document.getElementById('premiumUsers').textContent = stats.premiumUsers;
+            document.getElementById('totalScans').textContent = stats.totalScans.toLocaleString();
+            document.getElementById('totalCalories').textContent = stats.totalCalories.toLocaleString();
+
+            renderUserList(users);
+            renderActivity(data.recentHistory);
+        }
+
+        function renderUserList(users) {
+            const container = document.getElementById('userList');
+            
+            if (users.length === 0) {
+                container.innerHTML = '<p class="empty-text">No users yet</p>';
+                return;
+            }
+
+            container.innerHTML = users.map(user => {
+                const isPremium = user.subscription && user.subscription.active && new Date(user.subscription.expiresAt) > new Date();
+                const isAdmin = user.email === 'victoriaocran2131@gmail.com';
+                const joinDate = new Date(user.createdAt).toLocaleDateString();
+                
+                return `
+                    <div class="user-card">
+                        <div class="user-avatar">${user.fullName.charAt(0).toUpperCase()}</div>
+                        <div class="user-info">
+                            <div class="user-name">
+                                ${user.fullName}
+                                ${isAdmin ? '<span class="badge admin">Admin</span>' : ''}
+                                ${isPremium ? '<span class="badge premium">Premium</span>' : '<span class="badge free">Free</span>'}
+                            </div>
+                            <div class="user-email">${user.email}</div>
+                            <div class="user-meta">Joined ${joinDate}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderActivity(history) {
+            const container = document.getElementById('activityList');
+            
+            if (!history || history.length === 0) {
+                container.innerHTML = '<p class="empty-text">No activity yet</p>';
+                return;
+            }
+
+            container.innerHTML = history.slice(0, 10).map(item => {
+                const time = new Date(item.createdAt).toLocaleString();
+                return `
+                    <div class="activity-item">
+                        <div class="activity-icon">🍽️</div>
+                        <div class="activity-info">
+                            <div class="activity-text">Scanned <strong>${item.foodName}</strong></div>
+                            <div class="activity-meta">${item.calories} cal · ${time}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        loadAdminData();
+    </script>
+</body>
+</html>

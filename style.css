@@ -2988,3 +2988,188 @@ body::before {
         font-size: 0.6rem;
     }
 }
+
+/* ========================================
+   ADMIN DASHBOARD
+   ======================================== */
+.admin-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 30px;
+}
+
+.admin-stat-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px;
+    background: rgba(201, 162, 39, 0.05);
+    border-radius: 16px;
+    border: 1px solid rgba(201, 162, 39, 0.1);
+}
+
+.admin-stat-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(201, 162, 39, 0.15);
+    border-radius: 12px;
+    color: #c9a227;
+    flex-shrink: 0;
+}
+
+.admin-stat-icon.premium-icon {
+    background: rgba(244, 208, 63, 0.15);
+    color: #f4d03f;
+}
+
+.admin-stat-icon.scans-icon {
+    background: rgba(46, 204, 113, 0.15);
+    color: #2ecc71;
+}
+
+.admin-stat-icon.calories-icon {
+    background: rgba(231, 76, 60, 0.15);
+    color: #e74c3c;
+}
+
+.admin-stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+.admin-stat-label {
+    font-size: 0.75rem;
+    color: #888;
+}
+
+.admin-section {
+    margin-bottom: 30px;
+}
+
+.user-list, .activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.user-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    background: rgba(201, 162, 39, 0.05);
+    border-radius: 14px;
+    border: 1px solid rgba(201, 162, 39, 0.1);
+}
+
+.user-avatar {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #c9a227 0%, #d4af37 100%);
+    border-radius: 50%;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #0a0a0f;
+    flex-shrink: 0;
+}
+
+.user-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.user-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.badge {
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge.admin {
+    background: rgba(231, 76, 60, 0.2);
+    color: #e74c3c;
+}
+
+.badge.premium {
+    background: rgba(201, 162, 39, 0.2);
+    color: #c9a227;
+}
+
+.badge.free {
+    background: rgba(100, 100, 120, 0.3);
+    color: #888;
+}
+
+.user-email {
+    font-size: 0.8rem;
+    color: #888;
+    margin-top: 2px;
+}
+
+.user-meta {
+    font-size: 0.7rem;
+    color: #666;
+    margin-top: 2px;
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    background: rgba(201, 162, 39, 0.05);
+    border-radius: 12px;
+    border: 1px solid rgba(201, 162, 39, 0.08);
+}
+
+.activity-icon {
+    font-size: 1.5rem;
+}
+
+.activity-text {
+    font-size: 0.9rem;
+    color: #ddd;
+}
+
+.activity-meta {
+    font-size: 0.75rem;
+    color: #666;
+    margin-top: 2px;
+}
+
+.loading-spinner, .empty-text, .error-text {
+    text-align: center;
+    padding: 30px;
+    color: #888;
+    font-size: 0.9rem;
+}
+
+.error-text {
+    color: #e74c3c;
+}
+
+@media (max-width: 500px) {
+    .admin-stats {
+        grid-template-columns: 1fr;
+    }
+}

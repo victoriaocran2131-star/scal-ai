@@ -521,6 +521,65 @@ app.get('/api/stats', authenticateToken, (req, res) => {
     }
 });
 
+// ==================== ADMIN ROUTES ====================
+
+// Admin middleware
+const adminOnly = (req, res, next) => {
+    const adminEmails = ['victoriaocran2131@gmail.com'];
+    if (!adminEmails.includes(req.user.email.toLowerCase())) {
+        return res.status(403).json({ error: 'Admin access required' });
+    }
+    next();
+};
+
+// Get all users (admin only)
+app.get('/api/admin/users', authenticateToken, adminOnly, (req, res) => {
+    try {
+        const db = loadDB();
+        
+        const users = db.users.map(u => ({
+            id: u.id,
+            fullName: u.fullName,
+            email: u.email,
+            createdAt: u.createdAt,
+            subscription: u.subscription || null
+        }));
+
+        const totalUsers = users.length;
+        const premiumUsers = users.filter(u => 
+            u.subscription && u.subscription.active && new Date(u.subscription.expiresAt) > new Date()
+        ).length;
+
+        const totalScans = db.history.length;
+        const totalCalories = db.history.reduce((sum, h) => sum + (h.calories || 0), 0);
+
+        const recentHistory = db.history
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .slice(0, 20)
+            .map(h => ({
+                foodName: h.foodName,
+                calories: h.calories,
+                createdAt: h.createdAt
+            }));
+
+        res.json({
+            success: true,
+            users,
+            recentHistory,
+            stats: {
+                totalUsers,
+                premiumUsers,
+                totalScans,
+                totalCalories: Math.round(totalCalories)
+            }
+        });
+
+    } catch (error) {
+        console.error('Admin users error:', error);
+        res.status(500).json({ error: 'Failed to get users' });
+    }
+});
+
 // ==================== SUBSCRIPTION ROUTES ====================
 
 // Check app access (subscription required)
