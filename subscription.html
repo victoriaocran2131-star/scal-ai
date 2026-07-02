@@ -279,6 +279,10 @@
         });
 
         document.getElementById('subscribeBtn').addEventListener('click', async () => {
+            if (currentBilling === 'weekly') {
+                window.location.href = 'https://paystack.shop/pay/4i-jmyzb7y';
+                return;
+            }
             if (currentBilling === 'annual') {
                 window.location.href = 'https://paystack.shop/pay/wwfe5di8p3';
                 return;
