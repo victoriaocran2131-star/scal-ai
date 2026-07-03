@@ -802,6 +802,11 @@ app.post('/api/upload', authenticateToken, upload.single('image'), (req, res) =>
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Redirect root to welcome page
+app.get('/', (req, res) => {
+    res.redirect('/welcome.html');
+});
+
 // ==================== START SERVER ====================
 
 app.listen(PORT, () => {
