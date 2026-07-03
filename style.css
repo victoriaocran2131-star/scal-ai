@@ -53,6 +53,23 @@ body::before {
     letter-spacing: 0.5px;
 }
 
+.welcome-btn-header {
+    background: rgba(201, 162, 39, 0.2);
+    color: #c9a227;
+    padding: 8px 16px;
+    border-radius: 20px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+    border: 1px solid rgba(201, 162, 39, 0.4);
+    transition: all 0.3s ease;
+}
+
+.welcome-btn-header:hover {
+    background: rgba(201, 162, 39, 0.4);
+    transform: scale(1.05);
+}
+
 .header-links {
     display: flex;
     gap: 8px;
