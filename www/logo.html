@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scal AI - Logo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #09090b;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            color: #fff;
+        }
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 40px;
+            background: linear-gradient(135deg, #c9a227 0%, #f4d03f 50%, #c9a227 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .logo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            max-width: 1000px;
+            width: 100%;
+        }
+        .logo-card {
+            background: #18181b;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 40px;
+            text-align: center;
+        }
+        .logo-card.dark { background: #0a0a0f; }
+        .logo-card.light { background: #ffffff; }
+        .logo-preview {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 140px;
+        }
+        .logo-preview img {
+            max-width: 100%;
+            height: auto;
+        }
+        .logo-label {
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 16px;
+        }
+        .logo-card.light .logo-label { color: #666; }
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #c9a227 0%, #d4af37 100%);
+            color: #0a0a0f;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(201, 162, 39, 0.3);
+        }
+        .section-title {
+            font-size: 1.2rem;
+            color: #888;
+            margin-top: 50px;
+            margin-bottom: 20px;
+        }
+        .usage-box {
+            background: #18181b;
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 600px;
+            width: 100%;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        code {
+            display: block;
+            background: #0a0a0f;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #c9a227;
+            margin-top: 10px;
+            overflow-x: auto;
+        }
+        .sizes {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        .size-item {
+            text-align: center;
+        }
+        .size-item svg {
+            display: block;
+            margin: 0 auto 8px;
+        }
+        .size-label {
+            font-size: 0.75rem;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>Scal AI Logo</h1>
+    
+    <div class="logo-grid">
+        <div class="logo-card dark">
+            <div class="logo-preview">
+                <img src="logo.svg" alt="Scal AI Logo">
+            </div>
+            <div class="logo-label">Full Logo (Dark Background)</div>
+            <a href="logo.svg" download="scal-ai-logo.svg" class="download-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download SVG
+            </a>
+        </div>
+        
+        <div class="logo-card light">
+            <div class="logo-preview">
+                <img src="logo.svg" alt="Scal AI Logo">
+            </div>
+            <div class="logo-label">Full Logo (Light Background)</div>
+            <a href="logo.svg" download="scal-ai-logo-light.svg" class="download-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download SVG
+            </a>
+        </div>
+    </div>
+    
+    <h2 class="section-title">Favicon Sizes</h2>
+    <div class="sizes">
+        <div class="size-item">
+            <img src="favicon.svg" width="16" height="16" alt="16x16">
+            <div class="size-label">16x16</div>
+        </div>
+        <div class="size-item">
+            <img src="favicon.svg" width="32" height="32" alt="32x32">
+            <div class="size-label">32x32</div>
+        </div>
+        <div class="size-item">
+            <img src="favicon.svg" width="48" height="48" alt="48x48">
+            <div class="size-label">48x48</div>
+        </div>
+        <div class="size-item">
+            <img src="favicon.svg" width="64" height="64" alt="64x64">
+            <div class="size-label">64x64</div>
+        </div>
+        <div class="size-item">
+            <img src="favicon.svg" width="128" height="128" alt="128x128">
+            <div class="size-label">128x128</div>
+        </div>
+    </div>
+    
+    <h2 class="section-title">How to Use</h2>
+    <div class="usage-box">
+        <p style="color: #888; font-size: 0.9rem;">Add to your HTML head tag:</p>
+        <code>&lt;link rel="icon" type="image/svg+xml" href="favicon.svg"&gt;<br>&lt;link rel="apple-touch-icon" href="favicon.svg"&gt;</code>
+        
+        <p style="color: #888; font-size: 0.9rem; margin-top: 16px;">Use in your app header:</p>
+        <code>&lt;img src="logo.svg" alt="Scal AI" height="40"&gt;</code>
+    </div>
+</body>
+</html>

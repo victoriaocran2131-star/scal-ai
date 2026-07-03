@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate Icons</title>
+    <style>
+        body { background: #111; color: #fff; font-family: Arial; text-align: center; padding: 40px; }
+        canvas { border: 1px solid #333; margin: 10px; }
+        p { color: #888; margin: 20px 0; }
+        a { color: #c9a227; }
+    </style>
+</head>
+<body>
+    <h1>Icon Generator</h1>
+    <p>Right-click each image below and "Save as" to download</p>
+    
+    <h3>192x192 Icon</h3>
+    <canvas id="c192" width="192" height="192"></canvas>
+    <br>
+    <a id="dl192" download="icon-192.png">Download icon-192.png</a>
+    
+    <h3>512x512 Icon</h3>
+    <canvas id="c512" width="512" height="512"></canvas>
+    <br>
+    <a id="dl512" download="icon-512.png">Download icon-512.png</a>
+
+    <script>
+        function drawIcon(canvasId, size) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            // Background
+            ctx.fillStyle = '#0a0a0f';
+            ctx.beginPath();
+            ctx.roundRect(0, 0, size, size, size * 0.15);
+            ctx.fill();
+            
+            // Gold accent bar at top
+            ctx.fillStyle = '#c9a227';
+            ctx.fillRect(0, 0, size, size * 0.08);
+            
+            // SCAL text
+            ctx.fillStyle = '#c9a227';
+            ctx.font = `bold ${size * 0.22}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.fillText('SCAL', size/2, size * 0.45);
+            
+            // AI text
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `bold ${size * 0.22}px Arial`;
+            ctx.fillText('AI', size/2, size * 0.65);
+            
+            // Fork icon
+            ctx.strokeStyle = '#c9a227';
+            ctx.lineWidth = size * 0.02;
+            ctx.lineCap = 'round';
+            
+            // Fork handle
+            const forkX = size * 0.35;
+            const forkTop = size * 0.72;
+            const forkBottom = size * 0.88;
+            ctx.beginPath();
+            ctx.moveTo(forkX, forkTop);
+            ctx.lineTo(forkX, forkBottom);
+            ctx.stroke();
+            
+            // Fork prongs
+            ctx.beginPath();
+            ctx.moveTo(forkX - size*0.04, forkTop);
+            ctx.lineTo(forkX - size*0.04, forkTop + size*0.06);
+            ctx.moveTo(forkX, forkTop);
+            ctx.lineTo(forkX, forkTop + size*0.06);
+            ctx.moveTo(forkX + size*0.04, forkTop);
+            ctx.lineTo(forkX + size*0.04, forkTop + size*0.06);
+            ctx.stroke();
+            
+            // Knife
+            const knifeX = size * 0.65;
+            ctx.beginPath();
+            ctx.moveTo(knifeX, forkTop);
+            ctx.lineTo(knifeX, forkBottom);
+            ctx.stroke();
+            
+            // Knife blade
+            ctx.beginPath();
+            ctx.moveTo(knifeX, forkTop);
+            ctx.quadraticCurveTo(knifeX + size*0.05, forkTop + size*0.04, knifeX, forkTop + size*0.08);
+            ctx.stroke();
+            
+            // Tagline
+            ctx.fillStyle = '#666';
+            ctx.font = `${size * 0.05}px Arial`;
+            ctx.fillText('FOOD · DRINK · HEALTH', size/2, size * 0.95);
+        }
+        
+        drawIcon('c192', 192);
+        drawIcon('c512', 512);
+        
+        // Download links
+        document.getElementById('dl192').href = document.getElementById('c192').toDataURL('image/png');
+        document.getElementById('dl512').href = document.getElementById('c512').toDataURL('image/png');
+    </script>
+</body>
+</html>

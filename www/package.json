@@ -5,10 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
-    "cap:sync": "npx cap sync ios",
-    "cap:open": "npx cap open ios",
-    "cap:build": "npx cap sync ios && npx cap open ios"
+    "dev": "node server.js"
   },
   "engines": {
     "node": ">=14.0.0"
