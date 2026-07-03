@@ -1,25 +1,27 @@
 {
-    "name": "Scal AI - Food Scanner",
+    "name": "Scal AI",
     "short_name": "Scal AI",
-    "description": "Scan food, track calories & nutrients with AI",
+    "description": "Intelligent Food Recognition - Scan food, track calories & nutrients with AI",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#0a0a0f",
     "theme_color": "#c9a227",
     "orientation": "portrait",
+    "scope": "/",
+    "lang": "en",
+    "categories": ["health", "fitness", "food", "utilities"],
     "icons": [
         {
             "src": "icon-192.png",
             "sizes": "192x192",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
         },
         {
             "src": "icon-512.png",
             "sizes": "512x512",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
         }
-    ],
-    "categories": ["health", "fitness", "food"]
+    ]
 }
