@@ -1235,6 +1235,27 @@ body::before {
     z-index: -1;
 }
 
+.about-link-top {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(201, 162, 39, 0.2);
+    color: #c9a227;
+    padding: 10px 20px;
+    border-radius: 25px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border: 1px solid rgba(201, 162, 39, 0.4);
+    transition: all 0.3s ease;
+    z-index: 100;
+}
+
+.about-link-top:hover {
+    background: rgba(201, 162, 39, 0.4);
+    transform: scale(1.05);
+}
+
 .welcome-container {
     width: 100%;
     max-width: 500px;
