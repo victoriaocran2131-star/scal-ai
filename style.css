@@ -686,6 +686,12 @@ body::before {
     margin-bottom: 20px;
 }
 
+.about-logo-img {
+    max-width: 300px;
+    height: auto;
+    margin-bottom: 20px;
+}
+
 .about-hero h1 {
     font-size: 3rem;
     font-weight: 700;
