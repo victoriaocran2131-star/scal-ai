@@ -500,6 +500,228 @@ body::before {
     line-height: 1.5;
 }
 
+/* Kidney Impact Section */
+.kidney-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(201, 162, 39, 0.1);
+}
+
+.kidney-section h3 {
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+    color: #888;
+    font-weight: 500;
+}
+
+/* 3D Kidney Container */
+.kidney-3d-container {
+    perspective: 800px;
+    margin-bottom: 15px;
+}
+
+.kidney-3d {
+    transform-style: preserve-3d;
+    animation: kidneyFloat 4s ease-in-out infinite;
+}
+
+@keyframes kidneyFloat {
+    0%, 100% { transform: rotateX(5deg) rotateY(0deg); }
+    25% { transform: rotateX(3deg) rotateY(3deg); }
+    50% { transform: rotateX(5deg) rotateY(0deg); }
+    75% { transform: rotateX(3deg) rotateY(-3deg); }
+}
+
+.kidney-scene {
+    display: flex;
+    justify-content: center;
+    padding: 10px 0;
+}
+
+.kidney-3d-svg {
+    width: 260px;
+    height: auto;
+    filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.5));
+    transition: filter 0.8s ease;
+}
+
+.kidney-organ {
+    transition: opacity 0.5s ease;
+}
+
+/* Glow effect on the 3D body */
+.kidney-3d-svg .left-organ,
+.kidney-3d-svg .right-organ {
+    cursor: default;
+}
+
+.kidney-3d-svg:hover .left-organ {
+    filter: brightness(1.1);
+}
+
+.kidney-3d-svg:hover .right-organ {
+    filter: brightness(1.1);
+}
+
+/* Kidney state glows */
+.kidney-3d-svg.state-excellent {
+    filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 15px rgba(40, 167, 69, 0.4));
+}
+.kidney-3d-svg.state-excellent #leftBody,
+.kidney-3d-svg.state-excellent #rightBody {
+    fill: url(#leftBodyGrad);
+}
+.kidney-3d-svg.state-excellent .left-organ,
+.kidney-3d-svg.state-excellent .right-organ {
+    filter: drop-shadow(0 0 8px rgba(40, 167, 69, 0.3));
+}
+
+.kidney-3d-svg.state-good {
+    filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 12px rgba(201, 162, 39, 0.4));
+}
+.kidney-3d-svg.state-good .left-organ,
+.kidney-3d-svg.state-good .right-organ {
+    filter: drop-shadow(0 0 6px rgba(201, 162, 39, 0.3));
+}
+
+.kidney-3d-svg.state-moderate {
+    filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 10px rgba(255, 193, 7, 0.4));
+}
+.kidney-3d-svg.state-moderate .left-organ,
+.kidney-3d-svg.state-moderate .right-organ {
+    filter: drop-shadow(0 0 5px rgba(255, 193, 7, 0.3));
+}
+
+.kidney-3d-svg.state-poor {
+    filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 10px rgba(220, 53, 69, 0.5));
+}
+.kidney-3d-svg.state-poor .left-organ,
+.kidney-3d-svg.state-poor .right-organ {
+    filter: drop-shadow(0 0 5px rgba(220, 53, 69, 0.4));
+}
+
+.kidney-3d-svg.state-harmful {
+    filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 15px rgba(220, 53, 69, 0.7));
+    animation: kidneyPulse 1.5s ease-in-out infinite;
+}
+.kidney-3d-svg.state-harmful .left-organ,
+.kidney-3d-svg.state-harmful .right-organ {
+    filter: drop-shadow(0 0 8px rgba(220, 53, 69, 0.6));
+}
+
+@keyframes kidneyPulse {
+    0%, 100% { filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 15px rgba(220, 53, 69, 0.7)); }
+    50% { filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 25px rgba(220, 53, 69, 0.9)); }
+}
+
+/* Labels */
+.kidney-labels {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 5px;
+}
+
+.k-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.65rem;
+    color: #888;
+    background: rgba(10, 10, 15, 0.6);
+    padding: 4px 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(201, 162, 39, 0.1);
+}
+
+.k-label-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Result Cards */
+.kidney-result-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.k-result-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: rgba(10, 10, 15, 0.7);
+    border-radius: 12px;
+    border: 1px solid rgba(201, 162, 39, 0.1);
+}
+
+.k-result-icon {
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.k-result-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.k-result-title {
+    font-size: 0.7rem;
+    color: #888;
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+
+.k-result-bar {
+    width: 100%;
+    height: 5px;
+    background: rgba(201, 162, 39, 0.1);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 2px;
+}
+
+.k-result-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 1s ease-out, background 0.8s ease;
+    background: linear-gradient(90deg, #c9a227, #f4d03f);
+}
+
+.k-result-fill.low { background: linear-gradient(90deg, #dc3545, #e85d6a); }
+.k-result-fill.medium { background: linear-gradient(90deg, #ffc107, #f4d03f); }
+.k-result-fill.high { background: linear-gradient(90deg, #28a745, #5dd879); }
+
+.k-result-val {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #c9a227;
+}
+
+/* Kidney Description */
+.kidney-desc {
+    color: #999;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    padding: 12px 15px;
+    background: rgba(201, 162, 39, 0.05);
+    border-radius: 12px;
+    border: 1px solid rgba(201, 162, 39, 0.1);
+    margin-top: 12px;
+}
+
+@media (max-width: 400px) {
+    .kidney-3d-svg { width: 220px; }
+    .kidney-result-cards { grid-template-columns: 1fr; }
+    .kidney-labels { gap: 6px; }
+}
+
 /* Error Message */
 .error-msg {
     text-align: center;

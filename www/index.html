@@ -146,6 +146,179 @@
                         <div class="digestion-desc" id="digestionDesc">-</div>
                     </div>
                 </div>
+
+                <div class="kidney-section">
+                    <h3>🫘 Kidney Impact</h3>
+                    <div class="kidney-3d-container">
+                        <div class="kidney-3d" id="kidney3d">
+                            <div class="kidney-scene">
+                                <svg viewBox="0 0 320 240" class="kidney-3d-svg" id="kidney3dSvg" xmlns="http://www.w3.org/2000/svg">
+                                    <defs>
+                                        <!-- Left kidney gradients for 3D effect -->
+                                        <radialGradient id="leftBodyGrad" cx="40%" cy="35%" r="65%" fx="35%" fy="30%">
+                                            <stop offset="0%" stop-color="#e8a040" stop-opacity="0.9"/>
+                                            <stop offset="40%" stop-color="#c98830" stop-opacity="0.85"/>
+                                            <stop offset="75%" stop-color="#a06820" stop-opacity="0.8"/>
+                                            <stop offset="100%" stop-color="#704810" stop-opacity="0.9"/>
+                                        </radialGradient>
+                                        <radialGradient id="leftCortexGrad" cx="45%" cy="40%" r="60%">
+                                            <stop offset="0%" stop-color="#f0c060" stop-opacity="0.7"/>
+                                            <stop offset="100%" stop-color="#c09030" stop-opacity="0.5"/>
+                                        </radialGradient>
+                                        <radialGradient id="leftMedullaGrad" cx="50%" cy="45%" r="55%">
+                                            <stop offset="0%" stop-color="#d4553a" stop-opacity="0.8"/>
+                                            <stop offset="100%" stop-color="#a03020" stop-opacity="0.7"/>
+                                        </radialGradient>
+                                        <radialGradient id="leftPelvisGrad" cx="50%" cy="50%" r="50%">
+                                            <stop offset="0%" stop-color="#ffe080" stop-opacity="0.9"/>
+                                            <stop offset="100%" stop-color="#c9a030" stop-opacity="0.8"/>
+                                        </radialGradient>
+                                        <!-- Right kidney gradients -->
+                                        <radialGradient id="rightBodyGrad" cx="60%" cy="35%" r="65%" fx="65%" fy="30%">
+                                            <stop offset="0%" stop-color="#e8a040" stop-opacity="0.9"/>
+                                            <stop offset="40%" stop-color="#c98830" stop-opacity="0.85"/>
+                                            <stop offset="75%" stop-color="#a06820" stop-opacity="0.8"/>
+                                            <stop offset="100%" stop-color="#704810" stop-opacity="0.9"/>
+                                        </radialGradient>
+                                        <radialGradient id="rightCortexGrad" cx="55%" cy="40%" r="60%">
+                                            <stop offset="0%" stop-color="#f0c060" stop-opacity="0.7"/>
+                                            <stop offset="100%" stop-color="#c09030" stop-opacity="0.5"/>
+                                        </radialGradient>
+                                        <radialGradient id="rightMedullaGrad" cx="50%" cy="45%" r="55%">
+                                            <stop offset="0%" stop-color="#d4553a" stop-opacity="0.8"/>
+                                            <stop offset="100%" stop-color="#a03020" stop-opacity="0.7"/>
+                                        </radialGradient>
+                                        <radialGradient id="rightPelvisGrad" cx="50%" cy="50%" r="50%">
+                                            <stop offset="0%" stop-color="#ffe080" stop-opacity="0.9"/>
+                                            <stop offset="100%" stop-color="#c9a030" stop-opacity="0.8"/>
+                                        </radialGradient>
+                                        <!-- Shadow filter -->
+                                        <filter id="kidneyShadow" x="-20%" y="-20%" width="140%" height="140%">
+                                            <feDropShadow dx="3" dy="5" stdDeviation="6" flood-color="#000" flood-opacity="0.4"/>
+                                        </filter>
+                                        <filter id="innerShadow" x="-10%" y="-10%" width="120%" height="120%">
+                                            <feDropShadow dx="1" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.3"/>
+                                        </filter>
+                                        <filter id="ureterGlow">
+                                            <feGaussianBlur stdDeviation="2" result="blur"/>
+                                            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                                        </filter>
+                                        <!-- Blood vessel gradient -->
+                                        <linearGradient id="arterialGrad" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stop-color="#cc3333"/>
+                                            <stop offset="100%" stop-color="#881111"/>
+                                        </linearGradient>
+                                        <linearGradient id="venousGrad" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stop-color="#3344aa"/>
+                                            <stop offset="100%" stop-color="#222266"/>
+                                        </linearGradient>
+                                    </defs>
+
+                                    <!-- LEFT KIDNEY (3D bean shape) -->
+                                    <g class="kidney-organ left-organ" filter="url(#kidneyShadow)">
+                                        <!-- Outer body - 3D bean shape -->
+                                        <path id="leftBody" d="M95,25 C55,20 22,55 18,100 C14,150 40,195 80,200 C105,203 125,185 132,165 L132,65 C127,45 110,28 95,25 Z" fill="url(#leftBodyGrad)" stroke="#8a5a18" stroke-width="1.5"/>
+                                        <!-- Highlight edge for 3D depth -->
+                                        <path d="M90,28 C58,24 28,58 24,100" fill="none" stroke="rgba(255,220,120,0.4)" stroke-width="3" stroke-linecap="round"/>
+                                        <!-- Cortex layer -->
+                                        <ellipse id="leftCortex" cx="75" cy="110" rx="42" ry="62" fill="url(#leftCortexGrad)" stroke="rgba(200,160,60,0.3)" stroke-width="0.5"/>
+                                        <!-- Medulla pyramids (3D ridges) -->
+                                        <path id="leftMedulla" d="M65,60 L75,95 L55,95 Z" fill="url(#leftMedullaGrad)" stroke="rgba(140,40,20,0.4)" stroke-width="0.5"/>
+                                        <path d="M80,55 L90,88 L70,88 Z" fill="url(#leftMedullaGrad)" stroke="rgba(140,40,20,0.4)" stroke-width="0.5" opacity="0.9"/>
+                                        <path d="M50,70 L60,100 L40,100 Z" fill="url(#leftMedullaGrad)" stroke="rgba(140,40,20,0.4)" stroke-width="0.5" opacity="0.85"/>
+                                        <path d="M70,75 L80,105 L60,105 Z" fill="url(#leftMedullaGrad)" stroke="rgba(140,40,20,0.4)" stroke-width="0.5" opacity="0.8"/>
+                                        <!-- Pelvis (funnel) -->
+                                        <ellipse id="leftPelvis" cx="80" cy="110" rx="12" ry="28" fill="url(#leftPelvisGrad)" stroke="rgba(180,140,40,0.5)" stroke-width="0.5"/>
+                                        <!-- Renal artery/vein -->
+                                        <rect x="128" y="90" width="22" height="7" rx="3" fill="url(#arterialGrad)" opacity="0.9"/>
+                                        <rect x="128" y="100" width="22" height="7" rx="3" fill="url(#venousGrad)" opacity="0.9"/>
+                                        <!-- Ureter with 3D tube effect -->
+                                        <path id="leftUreter" d="M82,135 C86,155 92,178 98,210" fill="none" stroke="#c9a030" stroke-width="5" stroke-linecap="round" filter="url(#ureterGlow)"/>
+                                        <path d="M82,135 C86,155 92,178 98,210" fill="none" stroke="rgba(255,220,120,0.4)" stroke-width="2" stroke-linecap="round"/>
+                                        <!-- Nephron dots (tiny detail) -->
+                                        <circle cx="60" cy="85" r="2" fill="rgba(255,200,80,0.5)"/>
+                                        <circle cx="75" cy="78" r="1.5" fill="rgba(255,200,80,0.4)"/>
+                                        <circle cx="68" cy="95" r="1.8" fill="rgba(255,200,80,0.45)"/>
+                                    </g>
+
+                                    <!-- RIGHT KIDNEY (3D bean shape, mirrored) -->
+                                    <g class="kidney-organ right-organ" filter="url(#kidneyShadow)">
+                                        <path id="rightBody" d="M225,25 C265,20 298,55 302,100 C306,150 280,195 240,200 C215,203 195,185 188,165 L188,65 C193,45 210,28 225,25 Z" fill="url(#rightBodyGrad)" stroke="#8a5a18" stroke-width="1.5"/>
+                                        <path d="M230,28 C262,24 292,58 296,100" fill="none" stroke="rgba(255,220,120,0.4)" stroke-width="3" stroke-linecap="round"/>
+                                        <ellipse id="rightCortex" cx="245" cy="110" rx="42" ry="62" fill="url(#rightCortexGrad)" stroke="rgba(200,160,60,0.3)" stroke-width="0.5"/>
+                                        <path id="rightMedulla" d="M255,60 L245,95 L265,95 Z" fill="url(#rightMedullaGrad)" stroke="rgba(140,40,20,0.4)" stroke-width="0.5"/>
+                                        <path d="M240,55 L230,88 L250,88 Z" fill="url(#rightMedullaGrad)" stroke="rgba(140,40,20,0.4)" stroke-width="0.5" opacity="0.9"/>
+                                        <path d="M270,70 L260,100 L280,100 Z" fill="url(#rightMedullaGrad)" stroke="rgba(140,40,20,0.4)" stroke-width="0.5" opacity="0.85"/>
+                                        <path d="M250,75 L240,105 L260,105 Z" fill="url(#rightMedullaGrad)" stroke="rgba(140,40,20,0.4)" stroke-width="0.5" opacity="0.8"/>
+                                        <ellipse id="rightPelvis" cx="240" cy="110" rx="12" ry="28" fill="url(#rightPelvisGrad)" stroke="rgba(180,140,40,0.5)" stroke-width="0.5"/>
+                                        <rect x="170" y="90" width="22" height="7" rx="3" fill="url(#arterialGrad)" opacity="0.9"/>
+                                        <rect x="170" y="100" width="22" height="7" rx="3" fill="url(#venousGrad)" opacity="0.9"/>
+                                        <path id="rightUreter" d="M238,135 C234,155 228,178 222,210" fill="none" stroke="#c9a030" stroke-width="5" stroke-linecap="round" filter="url(#ureterGlow)"/>
+                                        <path d="M238,135 C234,155 228,178 222,210" fill="none" stroke="rgba(255,220,120,0.4)" stroke-width="2" stroke-linecap="round"/>
+                                        <circle cx="260" cy="85" r="2" fill="rgba(255,200,80,0.5)"/>
+                                        <circle cx="245" cy="78" r="1.5" fill="rgba(255,200,80,0.4)"/>
+                                        <circle cx="252" cy="95" r="1.8" fill="rgba(255,200,80,0.45)"/>
+                                    </g>
+
+                                    <!-- Score ring in center -->
+                                    <circle cx="160" cy="225" r="16" fill="rgba(10,10,15,0.8)" stroke="#c9a227" stroke-width="2"/>
+                                    <text x="160" y="230" text-anchor="middle" fill="#c9a227" font-size="13" font-weight="700" id="kidneyScoreText">--</text>
+                                </svg>
+                            </div>
+                            <!-- Labels on diagram -->
+                            <div class="kidney-labels">
+                                <div class="k-label k-label-cortex" id="labelCortex">
+                                    <span class="k-label-dot" style="background:#f0c060"></span> Cortex
+                                </div>
+                                <div class="k-label k-label-medulla" id="labelMedulla">
+                                    <span class="k-label-dot" style="background:#d4553a"></span> Medulla
+                                </div>
+                                <div class="k-label k-label-pelvis" id="labelPelvis">
+                                    <span class="k-label-dot" style="background:#ffe080"></span> Pelvis
+                                </div>
+                                <div class="k-label k-label-ureter" id="labelUreter">
+                                    <span class="k-label-dot" style="background:#c9a030"></span> Ureter
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Result cards below the 3D diagram -->
+                        <div class="kidney-result-cards">
+                            <div class="k-result-card">
+                                <div class="k-result-icon">💧</div>
+                                <div class="k-result-info">
+                                    <div class="k-result-title">Hydration</div>
+                                    <div class="k-result-bar"><div class="k-result-fill" id="kidneyHydration" style="width:0%"></div></div>
+                                    <div class="k-result-val" id="kidneyHydrationVal">--</div>
+                                </div>
+                            </div>
+                            <div class="k-result-card">
+                                <div class="k-result-icon">⚙️</div>
+                                <div class="k-result-info">
+                                    <div class="k-result-title">Filtration</div>
+                                    <div class="k-result-bar"><div class="k-result-fill" id="kidneyFiltration" style="width:0%"></div></div>
+                                    <div class="k-result-val" id="kidneyFiltrationVal">--</div>
+                                </div>
+                            </div>
+                            <div class="k-result-card">
+                                <div class="k-result-icon">🧂</div>
+                                <div class="k-result-info">
+                                    <div class="k-result-title">Sodium</div>
+                                    <div class="k-result-bar"><div class="k-result-fill" id="kidneySodium" style="width:0%"></div></div>
+                                    <div class="k-result-val" id="kidneySodiumVal">--</div>
+                                </div>
+                            </div>
+                            <div class="k-result-card">
+                                <div class="k-result-icon">🍬</div>
+                                <div class="k-result-info">
+                                    <div class="k-result-title">Sugar</div>
+                                    <div class="k-result-bar"><div class="k-result-fill" id="kidneySugar" style="width:0%"></div></div>
+                                    <div class="k-result-val" id="kidneySugarVal">--</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="kidney-desc" id="kidneyDesc">-</div>
+                </div>
             </div>
 
             <div class="error-msg" id="errorMsg" style="display: none;">

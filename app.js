@@ -264,6 +264,7 @@ class FoodScannerApp {
         
         this.updateNutritionDisplay(data);
         this.updateDigestionDisplay(data);
+        this.updateKidneyDisplay(name);
         
         this.foodResults.style.display = 'block';
         this.errorMsg.style.display = 'none';
@@ -309,6 +310,57 @@ class FoodScannerApp {
         
         const percentage = Math.min((hours / maxHours) * 100, 100);
         document.getElementById('digestionBar').style.width = percentage + '%';
+    }
+    
+    updateKidneyDisplay(foodName) {
+        const kidney = kidneyData[foodName];
+        if (!kidney) return;
+        
+        const svg = document.getElementById('kidney3dSvg');
+        const scoreText = document.getElementById('kidneyScoreText');
+        
+        // Remove all state classes
+        svg.classList.remove('state-excellent', 'state-good', 'state-moderate', 'state-poor', 'state-harmful');
+        
+        // Determine state class based on score
+        let state = 'state-harmful';
+        if (kidney.score >= 85) state = 'state-excellent';
+        else if (kidney.score >= 70) state = 'state-good';
+        else if (kidney.score >= 50) state = 'state-moderate';
+        else if (kidney.score >= 30) state = 'state-poor';
+        
+        // Animate in after a short delay
+        setTimeout(() => {
+            svg.classList.add(state);
+            scoreText.textContent = kidney.score;
+        }, 100);
+        
+        // Update result cards with animation
+        const meters = [
+            { id: 'kidneyHydration', valId: 'kidneyHydrationVal', value: kidney.hydration },
+            { id: 'kidneyFiltration', valId: 'kidneyFiltrationVal', value: kidney.filtration },
+            { id: 'kidneySodium', valId: 'kidneySodiumVal', value: kidney.sodium },
+            { id: 'kidneySugar', valId: 'kidneySugarVal', value: kidney.sugar }
+        ];
+        
+        meters.forEach((m, i) => {
+            setTimeout(() => {
+                const fill = document.getElementById(m.id);
+                const val = document.getElementById(m.valId);
+                
+                fill.classList.remove('low', 'medium', 'high');
+                
+                if (m.value >= 70) fill.classList.add('high');
+                else if (m.value >= 45) fill.classList.add('medium');
+                else fill.classList.add('low');
+                
+                fill.style.width = m.value + '%';
+                val.textContent = m.value;
+            }, 200 + (i * 150));
+        });
+        
+        // Update description
+        document.getElementById('kidneyDesc').textContent = kidney.desc;
     }
     
     async addToHistory() {
