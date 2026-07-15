@@ -63,6 +63,216 @@ class FoodScannerApp {
         this.downloadBtn.addEventListener('click', () => this.downloadPhoto());
         
         this.loadHistory();
+        this.initNotifications();
+    }
+    
+    // ==================== NATIVE NOTIFICATION SYSTEM ====================
+    async initNotifications() {
+        this.lastMealTime = localStorage.getItem('scalai_lastMealTime');
+        this.waterReminderInterval = null;
+        this.mealReminderInterval = null;
+        
+        // Request native notification permission
+        await this.requestNotifPermission();
+        
+        // Cancel old scheduled notifications and reschedule
+        await this.cancelAllNotifications();
+        
+        // Schedule meal time notifications
+        this.scheduleMealNotifications();
+        
+        // If user ate recently, schedule water reminders
+        if (this.lastMealTime) {
+            this.scheduleWaterReminders();
+        }
+        
+        // Check meal times every 30 seconds
+        this.startMealTimeChecker();
+    }
+    
+    async requestNotifPermission() {
+        try {
+            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) {
+                const perm = await window.Capacitor.Plugins.LocalNotifications.requestPermissions();
+                console.log('Notification permission:', perm.display);
+                return perm.display === 'granted';
+            }
+        } catch (e) {
+            console.log('Capacitor not available, using web fallback');
+        }
+        return false;
+    }
+    
+    async cancelAllNotifications() {
+        try {
+            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) {
+                const pending = await window.Capacitor.Plugins.LocalNotifications.getPending();
+                if (pending.notifications && pending.notifications.length > 0) {
+                    await window.Capacitor.Plugins.LocalNotifications.cancel(pending);
+                }
+            }
+        } catch (e) {}
+    }
+    
+    async scheduleNativeNotification(title, body, id, seconds) {
+        try {
+            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) {
+                await window.Capacitor.Plugins.LocalNotifications.schedule({
+                    notifications: [{
+                        title: title,
+                        body: body,
+                        id: id,
+                        schedule: { at: new Date(Date.now() + seconds * 1000) },
+                        smallIcon: 'ic_stat_icon',
+                        largeIcon: 'ic_launcher',
+                        channelId: 'scal-ai-reminders',
+                        foreground: true
+                    }]
+                });
+                console.log(`Scheduled notification: ${title} in ${seconds}s`);
+            }
+        } catch (e) {
+            console.error('Failed to schedule notification:', e);
+        }
+    }
+    
+    scheduleMealNotifications() {
+        const now = new Date();
+        const meals = [
+            { type: 'breakfast', hour: 8, min: 0, label: '🌅 Breakfast Time!', desc: 'Start your day with a healthy breakfast. Scan your food to track nutrition.' },
+            { type: 'lunch', hour: 13, min: 0, label: '☀️ Lunch Time!', desc: 'Time for a balanced lunch. Don\'t forget to scan your meal.' },
+            { type: 'dinner', hour: 19, min: 0, label: '🌙 Dinner Time!', desc: 'End your day with a nutritious dinner. Track what you eat.' }
+        ];
+        
+        for (const meal of meals) {
+            const mealTime = new Date(now);
+            mealTime.setHours(meal.hour, meal.min, 0, 0);
+            
+            // If time already passed today, schedule for tomorrow
+            if (mealTime <= now) {
+                mealTime.setDate(mealTime.getDate() + 1);
+            }
+            
+            const secondsUntil = Math.floor((mealTime - now) / 1000);
+            const notifId = 1000 + meals.indexOf(meal);
+            
+            this.scheduleNativeNotification(meal.label, meal.desc, notifId, secondsUntil);
+        }
+    }
+    
+    scheduleWaterReminders() {
+        // Schedule water reminders every 2 hours for the next 12 hours
+        for (let i = 2; i <= 12; i += 2) {
+            const notifId = 2000 + i;
+            this.scheduleNativeNotification(
+                '💧 Drink Water!',
+                'Stay hydrated! A glass of water helps your kidneys flush toxins.',
+                notifId,
+                i * 3600 // hours to seconds
+            );
+        }
+    }
+    
+    startMealTimeChecker() {
+        if (this.mealReminderInterval) clearInterval(this.mealReminderInterval);
+        
+        this.mealReminderInterval = setInterval(() => {
+            const now = new Date();
+            const hour = now.getHours();
+            const minute = now.getMinutes();
+            const today = now.toISOString().split('T')[0];
+            const dismissed = JSON.parse(localStorage.getItem('scalai_notifDismissed') || '{}');
+            
+            const meals = [
+                { type: 'breakfast', startHour: 7, endHour: 9, endMin: 30, label: '🌅 Breakfast Time!', desc: 'Start your day with a healthy breakfast.' },
+                { type: 'lunch', startHour: 12, endHour: 14, endMin: 0, label: '☀️ Lunch Time!', desc: 'Time for a balanced lunch.' },
+                { type: 'dinner', startHour: 18, endHour: 20, endMin: 30, label: '🌙 Dinner Time!', desc: 'End your day with a nutritious dinner.' }
+            ];
+            
+            for (const meal of meals) {
+                const inWindow = (hour === meal.startHour && minute >= 0) || 
+                                 (hour > meal.startHour && hour < meal.endHour) ||
+                                 (hour === meal.endHour && minute <= meal.endMin);
+                
+                const dismissKey = `${meal.type}_${today}`;
+                
+                if (inWindow && !dismissed[dismissKey]) {
+                    const lastMeal = localStorage.getItem('scalai_lastMealType');
+                    const lastMealDate = localStorage.getItem('scalai_lastMealDate');
+                    
+                    if (lastMeal !== meal.type || lastMealDate !== today) {
+                        this.showInAppNotif(meal.label, meal.desc, meal.type);
+                        break;
+                    }
+                }
+            }
+        }, 30000);
+    }
+    
+    showInAppNotif(title, desc, type) {
+        const popup = document.getElementById('notifPopup');
+        if (!popup) return;
+        
+        document.getElementById('notifIcon').textContent = title.split(' ')[0];
+        document.getElementById('notifTitle').textContent = title.substring(title.indexOf(' ') + 1);
+        document.getElementById('notifDesc').textContent = desc;
+        document.getElementById('notifType').textContent = type;
+        
+        popup.classList.add('active');
+        this.playNotifSound();
+    }
+    
+    showWaterInAppNotif() {
+        const popup = document.getElementById('notifPopup');
+        if (!popup) return;
+        
+        document.getElementById('notifIcon').textContent = '💧';
+        document.getElementById('notifTitle').textContent = 'Drink Water';
+        document.getElementById('notifDesc').textContent = 'Stay hydrated! A glass of water helps your kidneys flush toxins.';
+        document.getElementById('notifType').textContent = 'water';
+        
+        popup.classList.add('active');
+        this.playNotifSound();
+    }
+    
+    playNotifSound() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.value = 800;
+            osc.type = 'sine';
+            gain.gain.value = 0.1;
+            osc.start();
+            setTimeout(() => { osc.stop(); ctx.close(); }, 200);
+        } catch(e) {}
+    }
+    
+    dismissNotification(eat) {
+        const popup = document.getElementById('notifPopup');
+        const type = document.getElementById('notifType').textContent;
+        const today = new Date().toISOString().split('T')[0];
+        
+        if (eat) {
+            // User tapped "I'll eat now" - record meal time
+            localStorage.setItem('scalai_lastMealTime', new Date().toISOString());
+            localStorage.setItem('scalai_lastMealType', type);
+            localStorage.setItem('scalai_lastMealDate', today);
+            
+            // Schedule water reminders starting 2 hours from now
+            this.cancelAllNotifications();
+            this.scheduleMealNotifications();
+            this.scheduleWaterReminders();
+        } else {
+            // Dismiss - mark as dismissed for today
+            const dismissed = JSON.parse(localStorage.getItem('scalai_notifDismissed') || '{}');
+            dismissed[`${type}_${today}`] = true;
+            localStorage.setItem('scalai_notifDismissed', JSON.stringify(dismissed));
+        }
+        
+        popup.classList.remove('active');
     }
     
     signOut() {
