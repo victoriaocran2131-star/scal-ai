@@ -934,7 +934,7 @@ app.get('/api/metrics', authenticateToken, adminOnly, async (req, res) => {
 
 // ==================== PAYSTACK PAYMENT VERIFICATION ====================
 
-const PAYSTACK_SECRET = 'sk_live_d3558a0f29e9e8e2a8593ba913a69fbda3c0b64d';
+const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY || 'sk_live_xxxxxxxxxxxxxxxx';
 
 // Verify payment - called by app after Paystack callback
 app.get('/api/verify-payment/:reference', async (req, res) => {

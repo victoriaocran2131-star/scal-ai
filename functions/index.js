@@ -9,7 +9,7 @@ const db = admin.firestore();
 exports.paystackWebhook = functions.https.onRequest(async (req, res) => {
   // Verify Paystack signature (important for security)
   const crypto = require("crypto");
-  const secretKey = "sk_live_d3558a0f29e9e8e2a8593ba913a69fbda3c0b64d";
+  const secretKey = process.env.PAYSTACK_SECRET_KEY || "sk_live_xxxxxxxxxxxxxxxx";
   
   const hash = crypto
     .createHmac("sha512", secretKey)
