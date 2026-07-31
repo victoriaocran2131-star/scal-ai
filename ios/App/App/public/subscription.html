@@ -284,13 +284,6 @@
                 return;
             }
             
-            // Register device first
-            const deviceResult = await registerDevice(userId);
-            if (!deviceResult.success) {
-                alert(deviceResult.error || 'Device limit reached. Max 3 devices allowed.');
-                return;
-            }
-            
             const amounts = { weekly: 100, monthly: 399, annual: 2099 };
             
             const handler = PaystackPop.setup({
@@ -301,22 +294,24 @@
                 metadata: {
                     user_id: userId,
                     billing: currentBilling,
-                    plan: 'premium',
-                    device_id: generateDeviceId()
+                    plan: 'premium'
                 },
                 callback: async function(response) {
                     const userId = getUserId();
                     if (!userId) return;
                     
                     try {
-                        const tokenResult = await issueSubscriptionToken(userId, response.reference, currentBilling);
+                        // Step 1: Verify payment with server
+                        const verifyResponse = await fetch(`https://scal-ai-pbu8.onrender.com/api/verify-payment/${response.reference}`);
+                        const verifyData = await verifyResponse.json();
                         
-                        if (tokenResult.success) {
+                        // Step 2: Only activate if server confirms
+                        if (verifyData.success && verifyData.verified) {
                             await subscribe(userId, currentBilling);
                             alert('Payment verified and subscription activated!');
                             checkSubscriptionStatus();
                         } else {
-                            alert('Payment verification failed. Reference: ' + response.reference);
+                            alert('Payment verification failed. Please contact support. Reference: ' + response.reference);
                         }
                     } catch (error) {
                         alert('Could not verify payment. Reference: ' + response.reference);
@@ -347,7 +342,7 @@
             if (!userId) return;
             
             try {
-                const access = await secureCheckAccess(userId);
+                const access = await checkAccess(userId);
                 if (access.hasAccess || access.isAdmin) {
                     document.getElementById('subStatus').style.display = 'block';
                     document.getElementById('subDetails').textContent = access.isAdmin ? 
@@ -362,9 +357,8 @@
             }
         }
 
-        window.addEventListener('load', async () => {
+        window.addEventListener('load', () => {
             updateSlider();
-            await checkAppIntegrity();
             checkSubscriptionStatus();
         });
 

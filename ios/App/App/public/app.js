@@ -66,11 +66,6 @@ class FoodScannerApp {
         
         this.loadHistory();
         this.initNotifications();
-        
-        // Register device on app load
-        if (this.user) {
-            registerDevice(this.user.uid);
-        }
     }
     
     // ==================== NATIVE NOTIFICATION SYSTEM ====================

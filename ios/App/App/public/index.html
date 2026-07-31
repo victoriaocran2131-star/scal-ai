@@ -364,8 +364,7 @@
             }
             
             try {
-                await checkAppIntegrity();
-                const accessData = await secureCheckAccess(userId);
+                const accessData = await checkAccess(userId);
                 if (accessData.hasAccess || accessData.isAdmin) {
                     document.getElementById('mainApp').style.display = 'block';
                     document.getElementById('subOverlay').style.display = 'none';

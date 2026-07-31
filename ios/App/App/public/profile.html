@@ -224,9 +224,6 @@
 
             const sub = await getSubscription(userId);
             renderSubscription(sub);
-            
-            // Register device for security
-            await registerDevice(userId);
         }
 
         function renderProfile() {
