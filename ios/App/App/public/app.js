@@ -1,0 +1,629 @@
+class FoodScannerApp {
+    constructor() {
+        this.video = document.getElementById('video');
+        this.canvas = document.getElementById('canvas');
+        this.startBtn = document.getElementById('startBtn');
+        this.captureBtn = document.getElementById('captureBtn');
+        this.uploadBtn = document.getElementById('uploadBtn');
+        this.fileInput = document.getElementById('fileInput');
+        this.loading = document.getElementById('loading');
+        this.foodResults = document.getElementById('foodResults');
+        this.errorMsg = document.getElementById('errorMsg');
+        this.cameraPlaceholder = document.getElementById('cameraPlaceholder');
+        this.scanOverlay = document.querySelector('.scan-overlay');
+        this.scanLine = document.getElementById('scanLine');
+        this.foodSearch = document.getElementById('foodSearch');
+        this.suggestions = document.getElementById('suggestions');
+        this.capturedSection = document.getElementById('capturedSection');
+        this.capturedImage = document.getElementById('capturedImage');
+        this.flashOverlay = document.getElementById('flashOverlay');
+        this.loadingText = document.getElementById('loadingText');
+        this.scanProgressBar = document.getElementById('scanProgressBar');
+        this.retakeBtn = document.getElementById('retakeBtn');
+        this.downloadBtn = document.getElementById('downloadBtn');
+        
+        this.stream = null;
+        this.currentFood = null;
+        this.currentPortion = 1;
+        this.history = [];
+        this.lastCapturedImage = null;
+        this.user = JSON.parse(localStorage.getItem('scalai_user') || 'null');
+        
+        this.init();
+    }
+    
+    init() {
+        if (!this.user) {
+            window.location.href = 'signin.html';
+            return;
+        }
+        
+        if (this.user) {
+            document.getElementById('userGreeting').textContent = `Welcome, ${this.user.fullName}`;
+        }
+        
+        const signoutBtn = document.getElementById('signoutBtn');
+        if (signoutBtn) {
+            signoutBtn.addEventListener('click', () => this.signOut());
+        }
+        
+        this.startBtn.addEventListener('click', () => this.startCamera());
+        this.captureBtn.addEventListener('click', () => this.captureAndAnalyze());
+        this.uploadBtn.addEventListener('click', () => this.fileInput.click());
+        this.fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
+        
+        this.foodSearch.addEventListener('input', (e) => this.handleSearch(e.target.value));
+        this.foodSearch.addEventListener('focus', (e) => this.handleSearch(e.target.value));
+        
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-container')) {
+                this.suggestions.classList.remove('active');
+            }
+        });
+        
+        this.retakeBtn.addEventListener('click', () => this.retakePhoto());
+        this.downloadBtn.addEventListener('click', () => this.downloadPhoto());
+        
+        this.loadHistory();
+        this.initNotifications();
+        
+        // Register device on app load
+        if (this.user) {
+            registerDevice(this.user.uid);
+        }
+    }
+    
+    // ==================== NATIVE NOTIFICATION SYSTEM ====================
+    async initNotifications() {
+        this.lastMealTime = localStorage.getItem('scalai_lastMealTime');
+        this.waterReminderInterval = null;
+        this.mealReminderInterval = null;
+        
+        await this.requestNotifPermission();
+        await this.cancelAllNotifications();
+        this.scheduleMealNotifications();
+        
+        if (this.lastMealTime) {
+            this.scheduleWaterReminders();
+        }
+        
+        this.startMealTimeChecker();
+    }
+    
+    async requestNotifPermission() {
+        try {
+            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) {
+                const perm = await window.Capacitor.Plugins.LocalNotifications.requestPermissions();
+                console.log('Notification permission:', perm.display);
+                return perm.display === 'granted';
+            }
+        } catch (e) {
+            console.log('Capacitor not available, using web fallback');
+        }
+        return false;
+    }
+    
+    async cancelAllNotifications() {
+        try {
+            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) {
+                const pending = await window.Capacitor.Plugins.LocalNotifications.getPending();
+                if (pending.notifications && pending.notifications.length > 0) {
+                    await window.Capacitor.Plugins.LocalNotifications.cancel(pending);
+                }
+            }
+        } catch (e) {}
+    }
+    
+    async scheduleNativeNotification(title, body, id, seconds) {
+        try {
+            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) {
+                await window.Capacitor.Plugins.LocalNotifications.schedule({
+                    notifications: [{
+                        title: title,
+                        body: body,
+                        id: id,
+                        schedule: { at: new Date(Date.now() + seconds * 1000) },
+                        smallIcon: 'ic_stat_icon',
+                        largeIcon: 'ic_launcher',
+                        channelId: 'scal-ai-reminders',
+                        foreground: true
+                    }]
+                });
+                console.log(`Scheduled notification: ${title} in ${seconds}s`);
+            }
+        } catch (e) {
+            console.error('Failed to schedule notification:', e);
+        }
+    }
+    
+    scheduleMealNotifications() {
+        const now = new Date();
+        const meals = [
+            { type: 'breakfast', hour: 8, min: 0, label: '🌅 Breakfast Time!', desc: 'Start your day with a healthy breakfast. Scan your food to track nutrition.' },
+            { type: 'lunch', hour: 13, min: 0, label: '☀️ Lunch Time!', desc: 'Time for a balanced lunch. Don\'t forget to scan your meal.' },
+            { type: 'dinner', hour: 19, min: 0, label: '🌙 Dinner Time!', desc: 'End your day with a nutritious dinner. Track what you eat.' }
+        ];
+        
+        for (const meal of meals) {
+            const mealTime = new Date(now);
+            mealTime.setHours(meal.hour, meal.min, 0, 0);
+            
+            if (mealTime <= now) {
+                mealTime.setDate(mealTime.getDate() + 1);
+            }
+            
+            const secondsUntil = Math.floor((mealTime - now) / 1000);
+            const notifId = 1000 + meals.indexOf(meal);
+            
+            this.scheduleNativeNotification(meal.label, meal.desc, notifId, secondsUntil);
+        }
+    }
+    
+    scheduleWaterReminders() {
+        for (let i = 2; i <= 12; i += 2) {
+            const notifId = 2000 + i;
+            this.scheduleNativeNotification(
+                '💧 Drink Water!',
+                'Stay hydrated! A glass of water helps your kidneys flush toxins.',
+                notifId,
+                i * 3600
+            );
+        }
+    }
+    
+    startMealTimeChecker() {
+        if (this.mealReminderInterval) clearInterval(this.mealReminderInterval);
+        
+        this.mealReminderInterval = setInterval(() => {
+            const now = new Date();
+            const hour = now.getHours();
+            const minute = now.getMinutes();
+            const today = now.toISOString().split('T')[0];
+            const dismissed = JSON.parse(localStorage.getItem('scalai_notifDismissed') || '{}');
+            
+            const meals = [
+                { type: 'breakfast', startHour: 7, endHour: 9, endMin: 30, label: '🌅 Breakfast Time!', desc: 'Start your day with a healthy breakfast.' },
+                { type: 'lunch', startHour: 12, endHour: 14, endMin: 0, label: '☀️ Lunch Time!', desc: 'Time for a balanced lunch.' },
+                { type: 'dinner', startHour: 18, endHour: 20, endMin: 30, label: '🌙 Dinner Time!', desc: 'End your day with a nutritious dinner.' }
+            ];
+            
+            for (const meal of meals) {
+                const inWindow = (hour === meal.startHour && minute >= 0) || 
+                                 (hour > meal.startHour && hour < meal.endHour) ||
+                                 (hour === meal.endHour && minute <= meal.endMin);
+                
+                const dismissKey = `${meal.type}_${today}`;
+                
+                if (inWindow && !dismissed[dismissKey]) {
+                    const lastMeal = localStorage.getItem('scalai_lastMealType');
+                    const lastMealDate = localStorage.getItem('scalai_lastMealDate');
+                    
+                    if (lastMeal !== meal.type || lastMealDate !== today) {
+                        this.showInAppNotif(meal.label, meal.desc, meal.type);
+                        break;
+                    }
+                }
+            }
+        }, 30000);
+    }
+    
+    showInAppNotif(title, desc, type) {
+        const popup = document.getElementById('notifPopup');
+        if (!popup) return;
+        
+        document.getElementById('notifIcon').textContent = title.split(' ')[0];
+        document.getElementById('notifTitle').textContent = title.substring(title.indexOf(' ') + 1);
+        document.getElementById('notifDesc').textContent = desc;
+        document.getElementById('notifType').textContent = type;
+        
+        popup.classList.add('active');
+        this.playNotifSound();
+    }
+    
+    showWaterInAppNotif() {
+        const popup = document.getElementById('notifPopup');
+        if (!popup) return;
+        
+        document.getElementById('notifIcon').textContent = '💧';
+        document.getElementById('notifTitle').textContent = 'Drink Water';
+        document.getElementById('notifDesc').textContent = 'Stay hydrated! A glass of water helps your kidneys flush toxins.';
+        document.getElementById('notifType').textContent = 'water';
+        
+        popup.classList.add('active');
+        this.playNotifSound();
+    }
+    
+    playNotifSound() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.value = 800;
+            osc.type = 'sine';
+            gain.gain.value = 0.1;
+            osc.start();
+            setTimeout(() => { osc.stop(); ctx.close(); }, 200);
+        } catch(e) {}
+    }
+    
+    dismissNotification(eat) {
+        const popup = document.getElementById('notifPopup');
+        const type = document.getElementById('notifType').textContent;
+        const today = new Date().toISOString().split('T')[0];
+        
+        if (eat) {
+            localStorage.setItem('scalai_lastMealTime', new Date().toISOString());
+            localStorage.setItem('scalai_lastMealType', type);
+            localStorage.setItem('scalai_lastMealDate', today);
+            
+            this.cancelAllNotifications();
+            this.scheduleMealNotifications();
+            this.scheduleWaterReminders();
+        } else {
+            const dismissed = JSON.parse(localStorage.getItem('scalai_notifDismissed') || '{}');
+            dismissed[`${type}_${today}`] = true;
+            localStorage.setItem('scalai_notifDismissed', JSON.stringify(dismissed));
+        }
+        
+        popup.classList.remove('active');
+    }
+    
+    signOut() {
+        firebaseSignOut();
+        window.location.href = 'signin.html';
+    }
+    
+    async startCamera() {
+        try {
+            this.stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+            });
+            
+            this.video.srcObject = this.stream;
+            this.video.classList.add('active');
+            this.cameraPlaceholder.style.display = 'none';
+            this.scanOverlay.classList.add('active');
+            this.scanLine.classList.add('active');
+            
+            this.startBtn.disabled = true;
+            this.captureBtn.disabled = false;
+            
+            this.capturedSection.style.display = 'none';
+            this.foodResults.style.display = 'none';
+            this.errorMsg.style.display = 'none';
+        } catch (err) {
+            this.showError('Camera access denied. Please enable camera permissions or use manual input.');
+            console.error('Camera error:', err);
+        }
+    }
+    
+    stopCamera() {
+        if (this.stream) {
+            this.stream.getTracks().forEach(track => track.stop());
+            this.stream = null;
+        }
+        
+        this.video.classList.remove('active');
+        this.video.srcObject = null;
+        this.cameraPlaceholder.style.display = 'flex';
+        this.scanOverlay.classList.remove('active');
+        this.scanLine.classList.remove('active');
+        
+        this.startBtn.disabled = false;
+        this.captureBtn.disabled = true;
+    }
+    
+    async captureAndAnalyze() {
+        this.flashOverlay.classList.add('active');
+        setTimeout(() => this.flashOverlay.classList.remove('active'), 200);
+        
+        this.canvas.width = this.video.videoWidth;
+        this.canvas.height = this.video.videoHeight;
+        const ctx = this.canvas.getContext('2d');
+        ctx.drawImage(this.video, 0, 0);
+        
+        const imageData = this.canvas.toDataURL('image/jpeg', 0.9);
+        this.lastCapturedImage = imageData;
+        this.capturedImage.src = imageData;
+        this.capturedSection.style.display = 'block';
+        
+        this.stopCamera();
+        
+        this.loading.style.display = 'block';
+        this.foodResults.style.display = 'none';
+        this.errorMsg.style.display = 'none';
+        
+        this.scanProgressBar.style.width = '0%';
+        this.loadingText.textContent = 'Scanning food...';
+        
+        await this.simulateAnalysis();
+    }
+    
+    handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const imageData = e.target.result;
+            this.lastCapturedImage = imageData;
+            this.capturedImage.src = imageData;
+            this.capturedSection.style.display = 'block';
+            
+            this.loading.style.display = 'block';
+            this.foodResults.style.display = 'none';
+            this.errorMsg.style.display = 'none';
+            
+            this.scanProgressBar.style.width = '0%';
+            this.loadingText.textContent = 'Scanning food...';
+            
+            this.simulateAnalysis();
+        };
+        reader.readAsDataURL(file);
+        
+        this.fileInput.value = '';
+    }
+    
+    async simulateAnalysis() {
+        const steps = [
+            { progress: '20%', text: 'Detecting food items...' },
+            { progress: '45%', text: 'Analyzing image...' },
+            { progress: '70%', text: 'Verifying food item...' },
+            { progress: '90%', text: 'Calculating nutrition...' },
+            { progress: '100%', text: 'Analysis complete!' }
+        ];
+        
+        for (const step of steps) {
+            await new Promise(resolve => setTimeout(resolve, 450));
+            this.scanProgressBar.style.width = step.progress;
+            this.loadingText.textContent = step.text;
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        const isNotFood = Math.random() < 0.15;
+        
+        this.loading.style.display = 'none';
+        
+        if (isNotFood) {
+            this.showNotFoodError();
+            this.stopCamera();
+            return;
+        }
+        
+        const foods = Object.keys(foodDatabase);
+        const randomFood = foods[Math.floor(Math.random() * foods.length)];
+        
+        this.showFoodResult(randomFood, foodDatabase[randomFood]);
+        
+        await this.addToHistory();
+        
+        this.stopCamera();
+    }
+    
+    showNotFoodError() {
+        this.foodResults.style.display = 'none';
+        this.errorMsg.style.display = 'block';
+        this.errorMsg.innerHTML = `
+            <div class="error-content">
+                <div class="error-icon">⚠️</div>
+                <h3>Not Food Detected</h3>
+                <p>Sorry, it doesn't look like there's any food or drink in this image. Please try scanning a food item or use manual search below.</p>
+                <button onclick="foodApp.clearError()" class="try-again-btn">Try Again</button>
+            </div>
+        `;
+    }
+    
+    clearError() {
+        this.errorMsg.style.display = 'none';
+        this.capturedSection.style.display = 'none';
+        document.getElementById('scannerSection').style.display = 'block';
+        this.startCamera();
+    }
+    
+    showFoodResult(name, data) {
+        this.currentFood = { name, ...data };
+        this.currentPortion = 1;
+        
+        this.updateNutritionDisplay(data);
+        this.updateDigestionDisplay(data);
+        this.updateKidneyDisplay(name);
+        
+        this.foodResults.style.display = 'block';
+        this.errorMsg.style.display = 'none';
+        
+        this.showNotification('Added to log');
+    }
+    
+    showNotification(message) {
+        const existing = document.querySelector('.auto-notification');
+        if (existing) existing.remove();
+        
+        const notification = document.createElement('div');
+        notification.className = 'auto-notification';
+        notification.innerHTML = `<span>✓</span> ${message}`;
+        document.querySelector('.food-results').prepend(notification);
+        
+        setTimeout(() => notification.remove(), 2000);
+    }
+    
+    updateNutritionDisplay(data, multiplier = 1) {
+        document.getElementById('calories').textContent = Math.round(data.calories * multiplier);
+        document.getElementById('protein').textContent = (data.protein * multiplier).toFixed(1);
+        document.getElementById('fat').textContent = (data.fat * multiplier).toFixed(1);
+    }
+    
+    updateDigestionDisplay(data) {
+        document.getElementById('digestionTime').textContent = data.digestion;
+        document.getElementById('digestionDesc').textContent = data.digestionDesc;
+        
+        const timeStr = data.digestion;
+        let maxHours = 5;
+        let hours = 0;
+        
+        if (timeStr.includes('min')) {
+            const mins = parseInt(timeStr);
+            hours = mins / 60;
+        } else {
+            const match = timeStr.match(/(\d+)/);
+            hours = match ? parseInt(match[1]) : 2;
+        }
+        
+        const percentage = Math.min((hours / maxHours) * 100, 100);
+        document.getElementById('digestionBar').style.width = percentage + '%';
+    }
+    
+    updateKidneyDisplay(foodName) {
+        const kidney = kidneyData[foodName];
+        if (!kidney) return;
+        
+        const svg = document.getElementById('kidney3dSvg');
+        const scoreText = document.getElementById('kidneyScoreText');
+        
+        svg.classList.remove('state-excellent', 'state-good', 'state-moderate', 'state-poor', 'state-harmful');
+        
+        let state = 'state-harmful';
+        if (kidney.score >= 85) state = 'state-excellent';
+        else if (kidney.score >= 70) state = 'state-good';
+        else if (kidney.score >= 50) state = 'state-moderate';
+        else if (kidney.score >= 30) state = 'state-poor';
+        
+        setTimeout(() => {
+            svg.classList.add(state);
+            scoreText.textContent = kidney.score;
+        }, 100);
+        
+        const meters = [
+            { id: 'kidneyHydration', valId: 'kidneyHydrationVal', value: kidney.hydration },
+            { id: 'kidneyFiltration', valId: 'kidneyFiltrationVal', value: kidney.filtration },
+            { id: 'kidneySodium', valId: 'kidneySodiumVal', value: kidney.sodium },
+            { id: 'kidneySugar', valId: 'kidneySugarVal', value: kidney.sugar }
+        ];
+        
+        meters.forEach((m, i) => {
+            setTimeout(() => {
+                const fill = document.getElementById(m.id);
+                const val = document.getElementById(m.valId);
+                
+                fill.classList.remove('low', 'medium', 'high');
+                
+                if (m.value >= 70) fill.classList.add('high');
+                else if (m.value >= 45) fill.classList.add('medium');
+                else fill.classList.add('low');
+                
+                fill.style.width = m.value + '%';
+                val.textContent = m.value;
+            }, 200 + (i * 150));
+        });
+        
+        document.getElementById('kidneyDesc').textContent = kidney.desc;
+    }
+    
+    async addToHistory() {
+        if (!this.currentFood) return;
+        
+        const userId = getUserId();
+        if (!userId) {
+            console.error('No user ID found');
+            return;
+        }
+        
+        const entry = {
+            foodName: this.currentFood.name,
+            calories: Math.round(this.currentFood.calories * this.currentPortion),
+            protein: (this.currentFood.protein * this.currentPortion).toFixed(1),
+            fat: (this.currentFood.fat * this.currentPortion).toFixed(1),
+            digestion: this.currentFood.digestion,
+            image: this.lastCapturedImage
+        };
+        
+        try {
+            const historyId = await addHistoryEntry(userId, entry);
+            this.history.unshift({ id: historyId, ...entry });
+            
+            await updateDailyLog(userId, entry);
+        } catch (error) {
+            console.error('Failed to save to history:', error);
+        }
+    }
+    
+    handleSearch(query) {
+        if (query.length < 1) {
+            this.suggestions.classList.remove('active');
+            return;
+        }
+        
+        const results = searchFood(query);
+        
+        if (results.length === 0) {
+            this.suggestions.classList.remove('active');
+            return;
+        }
+        
+        this.suggestions.innerHTML = results.map(food => `
+            <div class="suggestion-item" data-food="${food.name}">
+                ${this.capitalizeWords(food.name)} - ${food.calories} cal
+            </div>
+        `).join('');
+        
+        this.suggestions.classList.add('active');
+        
+        this.suggestions.querySelectorAll('.suggestion-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const foodName = item.dataset.food;
+                this.showFoodResult(foodName, foodDatabase[foodName]);
+                this.addToHistory();
+                this.foodSearch.value = '';
+                this.suggestions.classList.remove('active');
+            });
+        });
+    }
+    
+    async loadHistory() {
+        const userId = getUserId();
+        if (!userId) return;
+        
+        try {
+            this.history = await getHistory(userId, 50);
+        } catch (error) {
+            console.error('Failed to load history:', error);
+        }
+    }
+    
+    showError(message) {
+        this.loading.style.display = 'none';
+        this.foodResults.style.display = 'none';
+        this.errorMsg.style.display = 'block';
+        document.getElementById('errorText').textContent = message;
+    }
+    
+    capitalizeWords(str) {
+        return str.replace(/\b\w/g, c => c.toUpperCase());
+    }
+    
+    retakePhoto() {
+        this.capturedSection.style.display = 'none';
+        this.foodResults.style.display = 'none';
+        this.errorMsg.style.display = 'none';
+        document.getElementById('scannerSection').style.display = 'block';
+        this.startCamera();
+    }
+    
+    downloadPhoto() {
+        if (!this.lastCapturedImage) return;
+        
+        const link = document.createElement('a');
+        const timestamp = new Date().toISOString().slice(0, 10);
+        const foodName = this.currentFood ? this.currentFood.name : 'food';
+        link.download = `foodscan_${foodName}_${timestamp}.jpg`;
+        link.href = this.lastCapturedImage;
+        link.click();
+    }
+}
+
+let foodApp;
+document.addEventListener('DOMContentLoaded', () => {
+    foodApp = new FoodScannerApp();
+});

@@ -1,5 +1,14 @@
 node_modules/
 uploads/
 .env
-ios/
+ios/App/App/Pods/
+ios/App/App/build/
+ios/App/App/DerivedData/
+ios/App/App/Assets.xcassets/
+ios/App/App/*.storyboard
+ios/App/App/*.xcconfig
+ios/App/App/*.entitlements
+ios/App/App/*.plist
+ios/App/App/*.xcworkspacedata
+ios/App/App/Scal\ AI/
 www/

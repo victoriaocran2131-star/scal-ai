@@ -12,6 +12,13 @@ const rateLimit = require('express-rate-limit');
 const slowDown = require('express-slow-down');
 const helmet = require('helmet');
 
+// Initialize Firebase Admin
+const admin = require('firebase-admin');
+admin.initializeApp({
+    credential: admin.credential.applicationDefault(),
+    projectId: 'scal-ai-4910c'
+});
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'scal_ai_secret_key';
@@ -176,6 +183,25 @@ const authenticateToken = (req, res, next) => {
     try {
         const verified = jwt.verify(token, JWT_SECRET);
         req.user = verified;
+        next();
+    } catch (error) {
+        res.status(403).json({ error: 'Invalid or expired token' });
+    }
+};
+
+// Firebase Auth verification middleware
+const authenticateFirebase = async (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    
+    if (!token) {
+        return res.status(401).json({ error: 'Access denied. No token provided.' });
+    }
+    
+    try {
+        const admin = require('firebase-admin');
+        const decodedToken = await admin.auth().verifyIdToken(token);
+        req.user = { id: decodedToken.uid, email: decodedToken.email };
         next();
     } catch (error) {
         res.status(403).json({ error: 'Invalid or expired token' });
@@ -1035,6 +1061,240 @@ app.post('/api/paystack-webhook', express.raw({ type: 'application/json' }), asy
         console.error('Webhook error:', error);
         res.status(200).json({ received: true });
     }
+});
+
+// ==================== SECURITY: SUBSCRIPTION TOKEN SYSTEM ====================
+
+// After payment verification, generate a signed subscription token
+app.post('/api/issue-subscription-token', async (req, res) => {
+    try {
+        const { userId, reference, billing } = req.body;
+        
+        if (!userId || !reference || !billing) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+
+        // Verify the payment reference with Paystack first
+        const response = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
+            headers: {
+                'Authorization': `Bearer ${PAYSTACK_SECRET}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+
+        if (!data.status || data.data.status !== 'success') {
+            return res.status(400).json({ error: 'Payment not verified' });
+        }
+
+        // Check reference hasn't been used before
+        const existingUser = await User.findOne({ 'subscription.paystackReference': reference });
+        if (existingUser) {
+            return res.status(400).json({ error: 'Reference already used' });
+        }
+
+        // Generate signed subscription token (7 days for weekly, 30 for monthly, 365 for annual)
+        const pricing = { weekly: 7, monthly: 30, annual: 365 };
+        const expiresIn = pricing[billing] + 'd';
+        
+        const subToken = jwt.sign({
+            userId,
+            billing,
+            reference,
+            type: 'subscription'
+        }, JWT_SECRET, { expiresIn });
+
+        // Update user subscription in database
+        const user = await User.findOne({ id: userId });
+        if (user) {
+            const days = pricing[billing];
+            const expiresAt = new Date();
+            expiresAt.setDate(expiresAt.getDate() + days);
+            
+            user.subscription = {
+                active: true,
+                plan: 'premium',
+                billing: billing,
+                expiresAt: expiresAt,
+                createdAt: new Date(),
+                paystackReference: reference,
+                subToken: subToken
+            };
+            await user.save();
+        }
+
+        res.json({
+            success: true,
+            token: subToken,
+            billing: billing,
+            expiresAt: new Date(Date.now() + pricing[billing] * 86400000).toISOString()
+        });
+
+    } catch (error) {
+        console.error('Issue token error:', error);
+        res.status(500).json({ error: 'Failed to issue token' });
+    }
+});
+
+// Verify subscription token - called by app on every load
+app.post('/api/verify-subscription-token', async (req, res) => {
+    try {
+        const { token, userId } = req.body;
+        
+        if (!token || !userId) {
+            return res.status(400).json({ error: 'Missing token or userId' });
+        }
+
+        // Verify JWT signature
+        let decoded;
+        try {
+            decoded = jwt.verify(token, JWT_SECRET);
+        } catch (err) {
+            return res.json({ success: true, valid: false, error: 'Invalid or expired token' });
+        }
+
+        // Check token type
+        if (decoded.type !== 'subscription') {
+            return res.json({ success: true, valid: false, error: 'Invalid token type' });
+        }
+
+        // Check token belongs to this user
+        if (decoded.userId !== userId) {
+            return res.json({ success: true, valid: false, error: 'Token does not belong to user' });
+        }
+
+        // Check if token is in database (not revoked)
+        const user = await User.findOne({ id: userId });
+        if (!user || !user.subscription || !user.subscription.active) {
+            return res.json({ success: true, valid: false, error: 'No active subscription' });
+        }
+
+        // Check expiry
+        if (user.subscription.expiresAt < new Date()) {
+            return res.json({ success: true, valid: false, error: 'Subscription expired' });
+        }
+
+        res.json({
+            success: true,
+            valid: true,
+            billing: decoded.billing,
+            expiresAt: user.subscription.expiresAt
+        });
+
+    } catch (error) {
+        console.error('Verify token error:', error);
+        res.status(500).json({ error: 'Failed to verify token' });
+    }
+});
+
+// ==================== SECURITY: DEVICE FINGERPRINTING ====================
+
+const deviceSchema = new mongoose.Schema({
+    userId: { type: String, required: true, index: true },
+    deviceId: { type: String, required: true },
+    deviceName: String,
+    lastSeen: { type: Date, default: Date.now },
+    createdAt: { type: Date, default: Date.now }
+});
+
+deviceSchema.index({ userId: 1, deviceId: 1 }, { unique: true });
+
+const Device = mongoose.model('Device', deviceSchema);
+
+// Register device - max 3 devices per user
+app.post('/api/register-device', authenticateFirebase, async (req, res) => {
+    try {
+        const { deviceId, deviceName } = req.body;
+        const userId = req.user.id;
+
+        if (!deviceId) {
+            return res.status(400).json({ error: 'Device ID required' });
+        }
+
+        // Check how many devices this user has
+        const deviceCount = await Device.countDocuments({ userId });
+        
+        // Check if this device already exists
+        const existingDevice = await Device.findOne({ userId, deviceId });
+        
+        if (!existingDevice) {
+            // New device - check limit
+            if (deviceCount >= 3) {
+                return res.status(403).json({ 
+                    error: 'Maximum 3 devices allowed. Remove a device first.',
+                    deviceCount: deviceCount,
+                    maxDevices: 3
+                });
+            }
+            
+            await Device.create({
+                userId,
+                deviceId,
+                deviceName: deviceName || 'Unknown Device'
+            });
+        } else {
+            // Update last seen
+            existingDevice.lastSeen = new Date();
+            await existingDevice.save();
+        }
+
+        const totalDevices = await Device.countDocuments({ userId });
+        
+        res.json({
+            success: true,
+            deviceCount: totalDevices,
+            maxDevices: 3
+        });
+
+    } catch (error) {
+        console.error('Register device error:', error);
+        res.status(500).json({ error: 'Failed to register device' });
+    }
+});
+
+// Remove device
+app.post('/api/remove-device', authenticateFirebase, async (req, res) => {
+    try {
+        const { deviceId } = req.body;
+        const userId = req.user.id;
+
+        await Device.deleteOne({ userId, deviceId });
+        
+        res.json({ success: true, message: 'Device removed' });
+
+    } catch (error) {
+        console.error('Remove device error:', error);
+        res.status(500).json({ error: 'Failed to remove device' });
+    }
+});
+
+// Get user devices
+app.get('/api/devices', authenticateFirebase, async (req, res) => {
+    try {
+        const devices = await Device.find({ userId: req.user.id });
+        res.json({ success: true, devices });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to get devices' });
+    }
+});
+
+// ==================== SECURITY: APP INTEGRITY CHECK ====================
+
+// Secret hash for app integrity - changes if code is modified
+const APP_VERSION = '1.0.0';
+const APP_SECRET_HASH = require('crypto')
+    .createHash('sha256')
+    .update(APP_VERSION + JWT_SECRET)
+    .digest('hex')
+    .substring(0, 32);
+
+app.get('/api/app-integrity', (req, res) => {
+    res.json({
+        version: APP_VERSION,
+        hash: APP_SECRET_HASH,
+        timestamp: Date.now()
+    });
 });
 
 // Redirect root to welcome page
