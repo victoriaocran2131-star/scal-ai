@@ -336,6 +336,21 @@
         </div>
     </div>
 
+    <!-- Notification Popup -->
+    <div class="notif-overlay" id="notifPopup">
+        <div class="notif-card">
+            <div class="notif-icon" id="notifIcon">💧</div>
+            <h3 class="notif-title" id="notifTitle">Drink Water</h3>
+            <p class="notif-desc" id="notifDesc">Stay hydrated!</p>
+            <input type="hidden" id="notifType" value="">
+            <input type="hidden" id="notifMealType" value="">
+            <div class="notif-actions">
+                <button class="notif-btn notif-eat" onclick="foodApp.dismissNotification(true)">I'll Eat Now</button>
+                <button class="notif-btn notif-dismiss" onclick="foodApp.dismissNotification(false)">Later</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Bottom Navigation Bar -->
     <nav class="bottom-nav">
         <a href="index.html" class="nav-item active">

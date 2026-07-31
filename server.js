@@ -7,26 +7,129 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
+const mongoose = require('mongoose');
+const rateLimit = require('express-rate-limit');
+const slowDown = require('express-slow-down');
+const helmet = require('helmet');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'scal_ai_secret_key';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/scalai';
 
-// JSON file-based database
-const DB_FILE = path.join(__dirname, 'database.json');
+// ==================== SECURITY & PERFORMANCE MIDDLEWARE ====================
 
-function loadDB() {
-    if (fs.existsSync(DB_FILE)) {
-        return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+// Security headers
+app.use(helmet());
+
+// Rate limiting - 100 requests per 15 minutes per IP
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: 'Too many requests, please try again later.',
+    standardHeaders: true,
+    legacyHeaders: false
+});
+app.use('/api/', limiter);
+
+// Speed limiting - slow down responses after 50 requests
+const speedLimiter = slowDown({
+    windowMs: 15 * 60 * 1000,
+    delayAfter: 50,
+    delayMs: 500
+});
+app.use('/api/', speedLimiter);
+
+// ==================== MONGOOSE SCHEMAS ====================
+
+const userSchema = new mongoose.Schema({
+    id: { type: String, required: true, unique: true },
+    fullName: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    subscription: {
+        active: { type: Boolean, default: false },
+        plan: String,
+        billing: String,
+        trialEndsAt: Date,
+        expiresAt: Date,
+        createdAt: Date,
+        cancelledAt: Date
+    },
+    createdAt: { type: Date, default: Date.now }
+});
+
+const historySchema = new mongoose.Schema({
+    id: { type: String, required: true, unique: true },
+    userId: { type: String, required: true, index: true },
+    foodName: String,
+    calories: Number,
+    protein: Number,
+    fat: Number,
+    digestion: String,
+    image: String,
+    createdAt: { type: Date, default: Date.now }
+});
+
+const dailyLogSchema = new mongoose.Schema({
+    id: { type: String, required: true, unique: true },
+    userId: { type: String, required: true, index: true },
+    date: { type: String, required: true },
+    totalCalories: { type: Number, default: 0 },
+    totalProtein: { type: Number, default: 0 },
+    totalFat: { type: Number, default: 0 },
+    mealCount: { type: Number, default: 0 },
+    createdAt: { type: Date, default: Date.now }
+});
+
+// Compound index for dailyLogs
+dailyLogSchema.index({ userId: 1, date: 1 }, { unique: true });
+
+// Additional indexes for high-scale queries
+historySchema.index({ createdAt: -1 });
+historySchema.index({ userId: 1, createdAt: -1 });
+userSchema.index({ email: 1 });
+userSchema.index({ 'subscription.active': 1 });
+
+const User = mongoose.model('User', userSchema);
+const History = mongoose.model('History', historySchema);
+const DailyLog = mongoose.model('DailyLog', dailyLogSchema);
+
+// ==================== CONNECT TO MONGODB ====================
+
+async function connectDB() {
+    try {
+        // Optimized connection for 1M+ users
+        await mongoose.connect(MONGODB_URI, {
+            maxPoolSize: 50,           // Maintain up to 50 socket connections
+            minPoolSize: 10,           // Maintain at least 10 socket connections
+            maxIdleTimeMS: 30000,      // Close connections after 30 seconds of inactivity
+            serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
+            socketTimeoutMS: 45000,    // Close sockets after 45 seconds of inactivity
+            family: 4                  // Use IPv4, skip trying IPv6
+        });
+        console.log('✅ Connected to MongoDB (Pool: 50 connections)');
+    } catch (error) {
+        console.error('❌ MongoDB connection error:', error);
+        process.exit(1);
     }
-    return { users: [], history: [], dailyLogs: [] };
 }
 
-function saveDB(data) {
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
-}
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+    console.log('SIGTERM received. Closing MongoDB connection...');
+    await mongoose.connection.close();
+    process.exit(0);
+});
 
-// Middleware
+process.on('SIGINT', async () => {
+    console.log('SIGINT received. Closing MongoDB connection...');
+    await mongoose.connection.close();
+    process.exit(0);
+});
+
+// ==================== MIDDLEWARE ====================
+
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -94,9 +197,8 @@ app.post('/api/auth/signup', async (req, res) => {
             return res.status(400).json({ error: 'Password must be at least 6 characters' });
         }
         
-        const db = loadDB();
-        
-        if (db.users.find(u => u.email === email)) {
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
             return res.status(400).json({ error: 'Email already registered' });
         }
         
@@ -104,16 +206,14 @@ app.post('/api/auth/signup', async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, salt);
         
         const userId = uuidv4();
-        const user = {
+        const user = new User({
             id: userId,
             fullName,
             email,
-            password: hashedPassword,
-            createdAt: new Date().toISOString()
-        };
+            password: hashedPassword
+        });
         
-        db.users.push(user);
-        saveDB(db);
+        await user.save();
         
         const token = jwt.sign({ id: userId, email }, JWT_SECRET, { expiresIn: '7d' });
         
@@ -139,8 +239,7 @@ app.post('/api/auth/signin', async (req, res) => {
             return res.status(400).json({ error: 'Email and password are required' });
         }
         
-        const db = loadDB();
-        const user = db.users.find(u => u.email === email);
+        const user = await User.findOne({ email });
         
         if (!user) {
             return res.status(401).json({ error: 'Invalid email or password' });
@@ -167,10 +266,9 @@ app.post('/api/auth/signin', async (req, res) => {
 });
 
 // Get current user profile
-app.get('/api/auth/profile', authenticateToken, (req, res) => {
+app.get('/api/auth/profile', authenticateToken, async (req, res) => {
     try {
-        const db = loadDB();
-        const user = db.users.find(u => u.id === req.user.id);
+        const user = await User.findOne({ id: req.user.id });
         
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
@@ -200,28 +298,27 @@ app.put('/api/auth/profile', authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'Name and email are required' });
         }
         
-        const db = loadDB();
-        const userIndex = db.users.findIndex(u => u.id === req.user.id);
+        const user = await User.findOne({ id: req.user.id });
         
-        if (userIndex === -1) {
+        if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
         
-        if (email !== db.users[userIndex].email) {
-            const emailExists = db.users.find(u => u.email === email && u.id !== req.user.id);
+        if (email !== user.email) {
+            const emailExists = await User.findOne({ email, id: { $ne: req.user.id } });
             if (emailExists) {
                 return res.status(400).json({ error: 'Email already in use' });
             }
         }
         
-        db.users[userIndex].fullName = fullName;
-        db.users[userIndex].email = email;
-        saveDB(db);
+        user.fullName = fullName;
+        user.email = email;
+        await user.save();
         
         res.json({
             success: true,
             message: 'Profile updated',
-            user: { id: db.users[userIndex].id, fullName, email }
+            user: { id: user.id, fullName, email }
         });
         
     } catch (error) {
@@ -243,21 +340,20 @@ app.put('/api/auth/password', authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'New password must be at least 6 characters' });
         }
         
-        const db = loadDB();
-        const userIndex = db.users.findIndex(u => u.id === req.user.id);
+        const user = await User.findOne({ id: req.user.id });
         
-        if (userIndex === -1) {
+        if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
         
-        const validPassword = await bcrypt.compare(currentPassword, db.users[userIndex].password);
+        const validPassword = await bcrypt.compare(currentPassword, user.password);
         if (!validPassword) {
             return res.status(401).json({ error: 'Current password is incorrect' });
         }
         
         const salt = await bcrypt.genSalt(10);
-        db.users[userIndex].password = await bcrypt.hash(newPassword, salt);
-        saveDB(db);
+        user.password = await bcrypt.hash(newPassword, salt);
+        await user.save();
         
         res.json({ success: true, message: 'Password updated successfully' });
         
@@ -268,19 +364,17 @@ app.put('/api/auth/password', authenticateToken, async (req, res) => {
 });
 
 // Delete account
-app.delete('/api/auth/delete', authenticateToken, (req, res) => {
+app.delete('/api/auth/delete', authenticateToken, async (req, res) => {
     try {
-        const db = loadDB();
-        const userIndex = db.users.findIndex(u => u.id === req.user.id);
+        const user = await User.findOne({ id: req.user.id });
         
-        if (userIndex === -1) {
+        if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
         
-        db.users.splice(userIndex, 1);
-        db.history = db.history.filter(h => h.userId !== req.user.id);
-        db.dailyLogs = db.dailyLogs.filter(l => l.userId !== req.user.id);
-        saveDB(db);
+        await User.deleteOne({ id: req.user.id });
+        await History.deleteMany({ userId: req.user.id });
+        await DailyLog.deleteMany({ userId: req.user.id });
         
         res.json({ success: true, message: 'Account deleted successfully' });
         
@@ -293,14 +387,13 @@ app.delete('/api/auth/delete', authenticateToken, (req, res) => {
 // ==================== SCAN HISTORY ROUTES ====================
 
 // Add scan to history
-app.post('/api/history', authenticateToken, (req, res) => {
+app.post('/api/history', authenticateToken, async (req, res) => {
     try {
         const { foodName, calories, protein, fat, digestion, image } = req.body;
         
-        const db = loadDB();
         const historyId = uuidv4();
         
-        const historyItem = {
+        const historyItem = new History({
             id: historyId,
             userId: req.user.id,
             foodName,
@@ -308,35 +401,33 @@ app.post('/api/history', authenticateToken, (req, res) => {
             protein,
             fat,
             digestion,
-            image: image || null,
-            createdAt: new Date().toISOString()
-        };
+            image: image || null
+        });
         
-        db.history.push(historyItem);
+        await historyItem.save();
         
         // Update daily log
         const today = new Date().toISOString().split('T')[0];
-        const existingLogIndex = db.dailyLogs.findIndex(l => l.userId === req.user.id && l.date === today);
+        const existingLog = await DailyLog.findOne({ userId: req.user.id, date: today });
         
-        if (existingLogIndex >= 0) {
-            db.dailyLogs[existingLogIndex].totalCalories += calories || 0;
-            db.dailyLogs[existingLogIndex].totalProtein += protein || 0;
-            db.dailyLogs[existingLogIndex].totalFat += fat || 0;
-            db.dailyLogs[existingLogIndex].mealCount += 1;
+        if (existingLog) {
+            existingLog.totalCalories += calories || 0;
+            existingLog.totalProtein += protein || 0;
+            existingLog.totalFat += fat || 0;
+            existingLog.mealCount += 1;
+            await existingLog.save();
         } else {
-            db.dailyLogs.push({
+            const newLog = new DailyLog({
                 id: uuidv4(),
                 userId: req.user.id,
                 date: today,
                 totalCalories: calories || 0,
                 totalProtein: protein || 0,
                 totalFat: fat || 0,
-                mealCount: 1,
-                createdAt: new Date().toISOString()
+                mealCount: 1
             });
+            await newLog.save();
         }
-        
-        saveDB(db);
         
         res.status(201).json({
             success: true,
@@ -351,35 +442,34 @@ app.post('/api/history', authenticateToken, (req, res) => {
 });
 
 // Get user's scan history
-app.get('/api/history', authenticateToken, (req, res) => {
+app.get('/api/history', authenticateToken, async (req, res) => {
     try {
         const { limit = 50, offset = 0, filter = 'all' } = req.query;
         
-        const db = loadDB();
-        let userHistory = db.history.filter(h => h.userId === req.user.id);
+        let query = { userId: req.user.id };
         
         // Apply date filter
         const now = new Date();
         if (filter === 'today') {
             const today = now.toISOString().split('T')[0];
-            userHistory = userHistory.filter(h => h.createdAt.split('T')[0] === today);
+            query.createdAt = { $gte: new Date(today) };
         } else if (filter === 'week') {
             const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
-            userHistory = userHistory.filter(h => new Date(h.createdAt) >= weekAgo);
+            query.createdAt = { $gte: weekAgo };
         } else if (filter === 'month') {
             const monthAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
-            userHistory = userHistory.filter(h => new Date(h.createdAt) >= monthAgo);
+            query.createdAt = { $gte: monthAgo };
         }
         
-        // Sort by newest first
-        userHistory.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        
-        const total = userHistory.length;
-        const paginatedHistory = userHistory.slice(parseInt(offset), parseInt(offset) + parseInt(limit));
+        const total = await History.countDocuments(query);
+        const userHistory = await History.find(query)
+            .sort({ createdAt: -1 })
+            .skip(parseInt(offset))
+            .limit(parseInt(limit));
         
         res.json({
             success: true,
-            history: paginatedHistory.map(h => ({
+            history: userHistory.map(h => ({
                 id: h.id,
                 foodName: h.foodName,
                 calories: h.calories,
@@ -401,17 +491,13 @@ app.get('/api/history', authenticateToken, (req, res) => {
 });
 
 // Delete scan from history
-app.delete('/api/history/:id', authenticateToken, (req, res) => {
+app.delete('/api/history/:id', authenticateToken, async (req, res) => {
     try {
-        const db = loadDB();
-        const index = db.history.findIndex(h => h.id === req.params.id && h.userId === req.user.id);
+        const result = await History.deleteOne({ id: req.params.id, userId: req.user.id });
         
-        if (index === -1) {
+        if (result.deletedCount === 0) {
             return res.status(404).json({ error: 'History item not found' });
         }
-        
-        db.history.splice(index, 1);
-        saveDB(db);
         
         res.json({ success: true, message: 'History item deleted' });
         
@@ -421,12 +507,10 @@ app.delete('/api/history/:id', authenticateToken, (req, res) => {
 });
 
 // Clear all history
-app.delete('/api/history', authenticateToken, (req, res) => {
+app.delete('/api/history', authenticateToken, async (req, res) => {
     try {
-        const db = loadDB();
-        db.history = db.history.filter(h => h.userId !== req.user.id);
-        db.dailyLogs = db.dailyLogs.filter(l => l.userId !== req.user.id);
-        saveDB(db);
+        await History.deleteMany({ userId: req.user.id });
+        await DailyLog.deleteMany({ userId: req.user.id });
         
         res.json({ success: true, message: 'All history cleared' });
         
@@ -438,15 +522,13 @@ app.delete('/api/history', authenticateToken, (req, res) => {
 // ==================== DAILY LOGS ROUTES ====================
 
 // Get daily logs
-app.get('/api/daily-logs', authenticateToken, (req, res) => {
+app.get('/api/daily-logs', authenticateToken, async (req, res) => {
     try {
         const { days = 7 } = req.query;
         
-        const db = loadDB();
-        const userLogs = db.dailyLogs
-            .filter(l => l.userId === req.user.id)
-            .sort((a, b) => new Date(b.date) - new Date(a.date))
-            .slice(0, parseInt(days));
+        const userLogs = await DailyLog.find({ userId: req.user.id })
+            .sort({ date: -1 })
+            .limit(parseInt(days));
         
         res.json({
             success: true,
@@ -466,12 +548,11 @@ app.get('/api/daily-logs', authenticateToken, (req, res) => {
 });
 
 // Get today's summary
-app.get('/api/daily-logs/today', authenticateToken, (req, res) => {
+app.get('/api/daily-logs/today', authenticateToken, async (req, res) => {
     try {
         const today = new Date().toISOString().split('T')[0];
         
-        const db = loadDB();
-        const log = db.dailyLogs.find(l => l.userId === req.user.id && l.date === today);
+        const log = await DailyLog.findOne({ userId: req.user.id, date: today });
         
         res.json({
             success: true,
@@ -492,10 +573,9 @@ app.get('/api/daily-logs/today', authenticateToken, (req, res) => {
 // ==================== STATS ROUTES ====================
 
 // Get user statistics
-app.get('/api/stats', authenticateToken, (req, res) => {
+app.get('/api/stats', authenticateToken, async (req, res) => {
     try {
-        const db = loadDB();
-        const userHistory = db.history.filter(h => h.userId === req.user.id);
+        const userHistory = await History.find({ userId: req.user.id });
         
         const totalScans = userHistory.length;
         const totalCalories = userHistory.reduce((sum, h) => sum + (h.calories || 0), 0);
@@ -503,7 +583,7 @@ app.get('/api/stats', authenticateToken, (req, res) => {
         const totalFat = userHistory.reduce((sum, h) => sum + parseFloat(h.fat || 0), 0);
         
         const today = new Date().toISOString().split('T')[0];
-        const todayScans = userHistory.filter(h => h.createdAt.split('T')[0] === today).length;
+        const todayScans = userHistory.filter(h => h.createdAt.toISOString().split('T')[0] === today).length;
         
         res.json({
             success: true,
@@ -533,38 +613,33 @@ const adminOnly = (req, res, next) => {
 };
 
 // Get all users (admin only)
-app.get('/api/admin/users', authenticateToken, adminOnly, (req, res) => {
+app.get('/api/admin/users', authenticateToken, adminOnly, async (req, res) => {
     try {
-        const db = loadDB();
-        
-        const users = db.users.map(u => ({
-            id: u.id,
-            fullName: u.fullName,
-            email: u.email,
-            createdAt: u.createdAt,
-            subscription: u.subscription || null
-        }));
+        const users = await User.find().select('-password');
 
         const totalUsers = users.length;
         const premiumUsers = users.filter(u => 
             u.subscription && u.subscription.active && new Date(u.subscription.expiresAt) > new Date()
         ).length;
 
-        const totalScans = db.history.length;
-        const totalCalories = db.history.reduce((sum, h) => sum + (h.calories || 0), 0);
+        const totalScans = await History.countDocuments();
+        const allHistory = await History.find();
+        const totalCalories = allHistory.reduce((sum, h) => sum + (h.calories || 0), 0);
 
-        const recentHistory = db.history
-            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-            .slice(0, 20)
-            .map(h => ({
-                foodName: h.foodName,
-                calories: h.calories,
-                createdAt: h.createdAt
-            }));
+        const recentHistory = await History.find()
+            .sort({ createdAt: -1 })
+            .limit(20)
+            .select('foodName calories createdAt');
 
         res.json({
             success: true,
-            users,
+            users: users.map(u => ({
+                id: u.id,
+                fullName: u.fullName,
+                email: u.email,
+                createdAt: u.createdAt,
+                subscription: u.subscription || null
+            })),
             recentHistory,
             stats: {
                 totalUsers,
@@ -583,10 +658,9 @@ app.get('/api/admin/users', authenticateToken, adminOnly, (req, res) => {
 // ==================== SUBSCRIPTION ROUTES ====================
 
 // Check app access (subscription required)
-app.get('/api/subscriptions/check-access', authenticateToken, (req, res) => {
+app.get('/api/subscriptions/check-access', authenticateToken, async (req, res) => {
     try {
-        const db = loadDB();
-        const user = db.users.find(u => u.id === req.user.id);
+        const user = await User.findOne({ id: req.user.id });
         
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
@@ -616,10 +690,9 @@ app.get('/api/subscriptions/check-access', authenticateToken, (req, res) => {
 });
 
 // Get subscription status
-app.get('/api/subscriptions/status', authenticateToken, (req, res) => {
+app.get('/api/subscriptions/status', authenticateToken, async (req, res) => {
     try {
-        const db = loadDB();
-        const user = db.users.find(u => u.id === req.user.id);
+        const user = await User.findOne({ id: req.user.id });
         
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
@@ -650,16 +723,13 @@ app.get('/api/subscriptions/status', authenticateToken, (req, res) => {
 });
 
 // Start free trial
-app.post('/api/subscriptions/trial', authenticateToken, (req, res) => {
+app.post('/api/subscriptions/trial', authenticateToken, async (req, res) => {
     try {
-        const db = loadDB();
-        const userIndex = db.users.findIndex(u => u.id === req.user.id);
+        const user = await User.findOne({ id: req.user.id });
         
-        if (userIndex === -1) {
+        if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
-        
-        const user = db.users[userIndex];
         
         if (user.subscription && (user.subscription.active || user.subscription.trialEndsAt)) {
             return res.status(400).json({ error: 'You already have an active subscription or trial' });
@@ -668,16 +738,16 @@ app.post('/api/subscriptions/trial', authenticateToken, (req, res) => {
         const trialEndsAt = new Date();
         trialEndsAt.setDate(trialEndsAt.getDate() + 7);
         
-        db.users[userIndex].subscription = {
+        user.subscription = {
             active: true,
             plan: 'premium',
             billing: 'trial',
-            trialEndsAt: trialEndsAt.toISOString(),
-            expiresAt: trialEndsAt.toISOString(),
-            createdAt: new Date().toISOString()
+            trialEndsAt: trialEndsAt,
+            expiresAt: trialEndsAt,
+            createdAt: new Date()
         };
         
-        saveDB(db);
+        await user.save();
         
         res.json({
             success: true,
@@ -697,7 +767,7 @@ app.post('/api/subscriptions/trial', authenticateToken, (req, res) => {
 });
 
 // Subscribe to premium
-app.post('/api/subscriptions/subscribe', authenticateToken, (req, res) => {
+app.post('/api/subscriptions/subscribe', authenticateToken, async (req, res) => {
     try {
         const { billing } = req.body;
         
@@ -705,10 +775,9 @@ app.post('/api/subscriptions/subscribe', authenticateToken, (req, res) => {
             return res.status(400).json({ error: 'Invalid billing period' });
         }
         
-        const db = loadDB();
-        const userIndex = db.users.findIndex(u => u.id === req.user.id);
+        const user = await User.findOne({ id: req.user.id });
         
-        if (userIndex === -1) {
+        if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
         
@@ -721,15 +790,15 @@ app.post('/api/subscriptions/subscribe', authenticateToken, (req, res) => {
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + pricing[billing]);
         
-        db.users[userIndex].subscription = {
+        user.subscription = {
             active: true,
             plan: 'premium',
             billing: billing,
-            expiresAt: expiresAt.toISOString(),
-            createdAt: new Date().toISOString()
+            expiresAt: expiresAt,
+            createdAt: new Date()
         };
         
-        saveDB(db);
+        await user.save();
         
         res.json({
             success: true,
@@ -748,23 +817,22 @@ app.post('/api/subscriptions/subscribe', authenticateToken, (req, res) => {
 });
 
 // Cancel subscription
-app.post('/api/subscriptions/cancel', authenticateToken, (req, res) => {
+app.post('/api/subscriptions/cancel', authenticateToken, async (req, res) => {
     try {
-        const db = loadDB();
-        const userIndex = db.users.findIndex(u => u.id === req.user.id);
+        const user = await User.findOne({ id: req.user.id });
         
-        if (userIndex === -1) {
+        if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
         
-        if (!db.users[userIndex].subscription || !db.users[userIndex].subscription.active) {
+        if (!user.subscription || !user.subscription.active) {
             return res.status(400).json({ error: 'No active subscription to cancel' });
         }
         
-        db.users[userIndex].subscription.active = false;
-        db.users[userIndex].subscription.cancelledAt = new Date().toISOString();
+        user.subscription.active = false;
+        user.subscription.cancelledAt = new Date();
         
-        saveDB(db);
+        await user.save();
         
         res.json({
             success: true,
@@ -802,6 +870,173 @@ app.post('/api/upload', authenticateToken, upload.single('image'), (req, res) =>
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// ==================== HEALTH CHECK & MONITORING ====================
+
+// Health check endpoint for load balancers
+app.get('/health', (req, res) => {
+    const healthcheck = {
+        uptime: process.uptime(),
+        message: 'OK',
+        timestamp: Date.now(),
+        mongoStatus: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+        memoryUsage: process.memoryUsage(),
+        activeConnections: mongoose.connection.readyState
+    };
+    
+    try {
+        res.status(200).json(healthcheck);
+    } catch (error) {
+        healthcheck.message = error;
+        res.status(503).json(healthcheck);
+    }
+});
+
+// Server metrics endpoint (admin only)
+app.get('/api/metrics', authenticateToken, adminOnly, async (req, res) => {
+    try {
+        const [totalUsers, premiumUsers, totalScans] = await Promise.all([
+            User.countDocuments(),
+            User.countDocuments({ 'subscription.active': true }),
+            History.countDocuments()
+        ]);
+
+        const dbStats = mongoose.connection.db ? await mongoose.connection.db.stats() : null;
+
+        res.json({
+            success: true,
+            metrics: {
+                users: {
+                    total: totalUsers,
+                    premium: premiumUsers,
+                    free: totalUsers - premiumUsers
+                },
+                scans: {
+                    total: totalScans
+                },
+                server: {
+                    uptime: process.uptime(),
+                    memory: process.memoryUsage(),
+                    nodeVersion: process.version
+                },
+                database: dbStats ? {
+                    collections: dbStats.collections,
+                    documents: dbStats.objects,
+                    storageSize: (dbStats.storageSize / 1024 / 1024).toFixed(2) + ' MB',
+                    dataSize: (dbStats.dataSize / 1024 / 1024).toFixed(2) + ' MB'
+                } : null
+            }
+        });
+    } catch (error) {
+        console.error('Metrics error:', error);
+        res.status(500).json({ error: 'Failed to get metrics' });
+    }
+});
+
+// ==================== PAYSTACK PAYMENT VERIFICATION ====================
+
+const PAYSTACK_SECRET = 'sk_live_d3558a0f29e9e8e2a8593ba913a69fbda3c0b64d';
+
+// Verify payment - called by app after Paystack callback
+app.get('/api/verify-payment/:reference', async (req, res) => {
+    try {
+        const { reference } = req.params;
+        
+        if (!reference) {
+            return res.status(400).json({ error: 'Reference is required' });
+        }
+
+        // Call Paystack API to verify
+        const response = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
+            headers: {
+                'Authorization': `Bearer ${PAYSTACK_SECRET}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+
+        if (!data.status) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Payment verification failed' 
+            });
+        }
+
+        const transaction = data.data;
+
+        // Check if payment was successful
+        if (transaction.status !== 'success') {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Payment not completed',
+                status: transaction.status 
+            });
+        }
+
+        // Extract metadata
+        const metadata = transaction.metadata || {};
+        const userId = metadata.user_id;
+        const billing = metadata.billing;
+
+        if (!userId || !billing) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Missing user or billing info in metadata' 
+            });
+        }
+
+        // Calculate expiry
+        const pricing = { weekly: 7, monthly: 30, annual: 365 };
+        const days = pricing[billing];
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + days);
+
+        // Return success with subscription details
+        res.json({
+            success: true,
+            verified: true,
+            userId: userId,
+            billing: billing,
+            expiresAt: expiresAt.toISOString(),
+            amount: transaction.amount / 100,
+            reference: reference
+        });
+
+    } catch (error) {
+        console.error('Payment verification error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to verify payment' 
+        });
+    }
+});
+
+// Paystack Webhook (backup - for server-to-server notifications)
+app.post('/api/paystack-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+    try {
+        const crypto = require('crypto');
+        const hash = crypto
+            .createHmac('sha512', PAYSTACK_SECRET)
+            .update(req.body)
+            .digest('hex');
+
+        if (hash !== req.headers['x-paystack-signature']) {
+            return res.status(400).json({ error: 'Invalid signature' });
+        }
+
+        const event = JSON.parse(req.body);
+
+        if (event.event === 'charge.success') {
+            console.log('Webhook: Payment successful:', event.data.reference);
+        }
+
+        res.status(200).json({ received: true });
+    } catch (error) {
+        console.error('Webhook error:', error);
+        res.status(200).json({ received: true });
+    }
+});
+
 // Redirect root to welcome page
 app.get('/', (req, res) => {
     res.redirect('/welcome.html');
@@ -809,13 +1044,17 @@ app.get('/', (req, res) => {
 
 // ==================== START SERVER ====================
 
-app.listen(PORT, () => {
-    console.log(`
+async function startServer() {
+    await connectDB();
+    
+    app.listen(PORT, () => {
+        console.log(`
 ╔══════════════════════════════════════════════════════════════╗
 ║                                                              ║
 ║                    🍽️  SCAL AI SERVER  🍽️                    ║
 ║                                                              ║
 ║  Server running at: http://localhost:${PORT}                    ║
+║  Database: MongoDB (Atlas)                                   ║
 ║                                                              ║
 ║  Pages:                                                      ║
 ║    Welcome:    http://localhost:${PORT}/welcome.html            ║
@@ -824,5 +1063,8 @@ app.listen(PORT, () => {
 ║    Main App:   http://localhost:${PORT}/index.html              ║
 ║                                                              ║
 ╚══════════════════════════════════════════════════════════════╝
-    `);
-});
+        `);
+    });
+}
+
+startServer();

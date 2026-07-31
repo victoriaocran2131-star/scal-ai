@@ -2,7 +2,7 @@ services:
   - type: web
     name: scal-ai
     runtime: node
-    plan: free
+    plan: starter
     buildCommand: npm install
     startCommand: node server.js
     envVars:
@@ -12,5 +12,14 @@ services:
         generateValue: true
       - key: PORT
         value: 10000
-    healthCheckPath: /
+      - key: MONGODB_URI
+        sync: false
+      - key: REDIS_URL
+        sync: false
+    healthCheckPath: /health
     autoDeploy: true
+    scaling:
+      minInstances: 1
+      maxInstances: 3
+      targetCPU: 70
+      targetMemory: 80
