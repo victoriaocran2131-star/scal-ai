@@ -51,7 +51,11 @@
 	<array>
 		<string>remote-notification</string>
 	</array>
-	<key>NSUserNotificationsUsageDescription</key>
-	<string>Scal AI would like to send you meal and hydration reminders to help you stay healthy.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Scal AI needs camera access to scan and identify food for nutrition tracking.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Scal AI needs access to your photo library to select food images for analysis.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Scal AI would like to save food scan photos to your photo library.</string>
 </dict>
 </plist>
