@@ -6,9 +6,6 @@ workflows:
       node: 18
       cocoapods: default
       xcode: latest
-      ios_signing:
-        distribution: app_store
-        bundle_identifier: com.scalai.app
     triggering:
       events:
         - push
@@ -18,7 +15,9 @@ workflows:
     scripts:
       - name: Install dependencies
         script: npm ci
-      - name: Install CocoaPods dependencies
+      - name: Sync Capacitor
+        script: npx cap sync ios
+      - name: Install CocoaPods
         script: cd ios/App && pod install
       - name: Build IPA
         script: |
@@ -35,11 +34,3 @@ workflows:
             -exportPath $CM_BUILD_DIR/output
     artifacts:
       - ios/App/output/*.ipa
-    publishing:
-      app_store_connect:
-        api_key: $APP_STORE_CONNECT_API_KEY_IDENTIFIER
-        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
-        key: $APP_STORE_CONNECT_API_PRIVATE_KEY
-        submit_to_app_store: true
-        beta_app_review:
-          submit_beta_review: false
