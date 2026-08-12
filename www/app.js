@@ -261,6 +261,7 @@ class FoodScannerApp {
         
         this.updateNutritionDisplay(data);
         this.updateDigestionDisplay(data);
+        this.updateKidneyDisplay(data);
         
         this.foodResults.style.display = 'block';
         this.errorMsg.style.display = 'none';
@@ -309,6 +310,60 @@ class FoodScannerApp {
         
         const percentage = Math.min((hours / maxHours) * 100, 100);
         document.getElementById('digestionBar').style.width = percentage + '%';
+    }
+    
+    updateKidneyDisplay(data) {
+        const impact = data.kidneyImpact || 'neutral';
+        const tip = data.kidneyTip || 'No kidney information available.';
+        
+        const kidneyLeft = document.getElementById('kidneyLeft');
+        const kidneyRight = document.getElementById('kidneyRight');
+        const kidneyTipText = document.getElementById('kidneyTipText');
+        const kidneyImpactText = document.getElementById('kidneyImpactText');
+        const kidneyImpactBadge = document.getElementById('kidneyImpactBadge');
+        const kidneyStatus = document.getElementById('kidneyStatus');
+        const kidneyIcon = document.getElementById('kidneyIcon');
+        const kidneyPulseLeft = document.getElementById('kidneyPulseLeft');
+        const kidneyPulseRight = document.getElementById('kidneyPulseRight');
+        const kidneySection = document.getElementById('kidneySection');
+        
+        // Remove old classes
+        kidneyLeft.classList.remove('kidney-positive', 'kidney-neutral', 'kidney-negative');
+        kidneyRight.classList.remove('kidney-positive', 'kidney-neutral', 'kidney-negative');
+        kidneyImpactBadge.classList.remove('badge-positive', 'badge-neutral', 'badge-negative');
+        kidneyPulseLeft.classList.remove('pulse-active');
+        kidneyPulseRight.classList.remove('pulse-active');
+        kidneySection.classList.remove('animate-in');
+        
+        // Force reflow for animation
+        void kidneySection.offsetWidth;
+        
+        // Apply new impact class
+        kidneyLeft.classList.add(`kidney-${impact}`);
+        kidneyRight.classList.add(`kidney-${impact}`);
+        kidneyImpactBadge.classList.add(`badge-${impact}`);
+        
+        // Trigger animation
+        kidneySection.classList.add('animate-in');
+        
+        // Set icon and status
+        if (impact === 'positive') {
+            kidneyIcon.textContent = '💚';
+            kidneyStatus.textContent = 'Kidneys Love This!';
+            kidneyImpactText.textContent = '✓ Kidney Friendly';
+            kidneyPulseLeft.classList.add('pulse-active');
+            kidneyPulseRight.classList.add('pulse-active');
+        } else if (impact === 'negative') {
+            kidneyIcon.textContent = '⚠️';
+            kidneyStatus.textContent = 'Kidneys Stressed';
+            kidneyImpactText.textContent = '✗ Strain on Kidneys';
+        } else {
+            kidneyIcon.textContent = '🫘';
+            kidneyStatus.textContent = 'Moderate Impact';
+            kidneyImpactText.textContent = '~ Neutral';
+        }
+        
+        kidneyTipText.textContent = tip;
     }
     
     async addToHistory() {

@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1, user-scalable=no">
     <title>Scal AI - Sign In</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="auth-page">
     <div class="auth-container">
@@ -14,13 +13,6 @@
                 <div class="auth-logo">🍽️</div>
                 <h1>Welcome Back</h1>
                 <p>Sign in to continue to Scal AI</p>
-            </div>
-
-            <div id="g_id_onload" data-callback="handleGoogleCredential"></div>
-            <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline" data-text="signin_with" data-size="large" data-width="100%" style="margin-bottom: 16px;"></div>
-
-            <div class="auth-divider">
-                <span>or sign in with email</span>
             </div>
 
             <form class="auth-form" id="signinForm">
@@ -57,38 +49,6 @@
 
     <script src="config.js"></script>
     <script>
-        function handleGoogleCredential(response) {
-            fetch(API_BASE + '/api/auth/google', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ credential: response.credential })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    localStorage.setItem('scalai_token', data.token);
-                    localStorage.setItem('scalai_user', JSON.stringify(data.user));
-                    
-                    if (data.hasActiveSubscription) {
-                        localStorage.setItem('hasActiveSubscription', 'true');
-                    }
-                    
-                    if (data.requiresSubscription) {
-                        window.location.href = 'subscription.html';
-                    } else {
-                        window.location.href = 'index.html';
-                    }
-                } else {
-                    document.getElementById('errorMessage').textContent = data.error || 'Google sign-in failed';
-                    document.getElementById('errorMessage').style.display = 'block';
-                }
-            })
-            .catch(() => {
-                document.getElementById('errorMessage').textContent = 'Connection failed. Please try again.';
-                document.getElementById('errorMessage').style.display = 'block';
-            });
-        }
-        
         // Email sign-in
         document.getElementById('signinForm').addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -96,20 +56,25 @@
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             const submitBtn = document.getElementById('submitBtn');
-            
             const errorMessage = document.getElementById('errorMessage');
-            errorMessage.style.display = 'none';
             
+            errorMessage.style.display = 'none';
             submitBtn.disabled = true;
             submitBtn.textContent = 'Signing In...';
+            
+            // Create abort controller for timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
             
             try {
                 const response = await fetch(API_BASE + '/api/auth/signin', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
+                    body: JSON.stringify({ email, password }),
+                    signal: controller.signal
                 });
                 
+                clearTimeout(timeoutId);
                 const data = await response.json();
                 
                 if (!response.ok) {
@@ -132,7 +97,12 @@
                 }
                 
             } catch (error) {
-                errorMessage.textContent = error.message || 'Connection failed. Please try again.';
+                clearTimeout(timeoutId);
+                if (error.name === 'AbortError') {
+                    errorMessage.textContent = 'Server is waking up. Please try again in 30 seconds.';
+                } else {
+                    errorMessage.textContent = error.message || 'Connection failed. Please try again.';
+                }
                 errorMessage.style.display = 'block';
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Sign In';

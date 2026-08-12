@@ -83,10 +83,13 @@ const authenticateToken = (req, res, next) => {
 
 // Subscription plans
 const SUBSCRIPTION_PLANS = {
-    weekly: { id: 'weekly', name: 'Weekly', price: 2.99, duration: 7, durationLabel: '1 Week' },
-    monthly: { id: 'monthly', name: 'Monthly', price: 9.99, duration: 30, durationLabel: '1 Month' },
-    yearly: { id: 'yearly', name: 'Yearly', price: 89.99, duration: 365, durationLabel: '1 Year', savings: '73%' }
+    weekly: { id: 'weekly', name: 'Weekly', price: 1.99, duration: 7, durationLabel: '1 Week' },
+    monthly: { id: 'monthly', name: 'Monthly', price: 7.99, duration: 30, durationLabel: '1 Month' },
+    yearly: { id: 'yearly', name: 'Yearly', price: 95.99, duration: 365, durationLabel: '1 Year', savings: '60%' }
 };
+
+// Paystack secret key (set in .env)
+const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || '';
 
 // Google OAuth - works with any Google account
 const googleClient = new OAuth2Client();
@@ -658,13 +661,38 @@ app.get('/api/subscription', authenticateToken, (req, res) => {
     }
 });
 
-// Activate / Purchase subscription
-app.post('/api/subscription/activate', authenticateToken, (req, res) => {
+// Activate / Purchase subscription with Paystack verification
+app.post('/api/subscription/activate', authenticateToken, async (req, res) => {
     try {
-        const { planId } = req.body;
+        const { planId, paystackReference } = req.body;
         
         if (!planId || !SUBSCRIPTION_PLANS[planId]) {
             return res.status(400).json({ error: 'Invalid plan selected' });
+        }
+
+        // Verify Paystack payment if reference provided
+        if (paystackReference && PAYSTACK_SECRET_KEY) {
+            try {
+                const verifyResponse = await fetch(`https://api.paystack.co/transaction/verify/${paystackReference}`, {
+                    headers: {
+                        'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}`,
+                    }
+                });
+                const verifyData = await verifyResponse.json();
+
+                if (!verifyData.status || verifyData.data.status !== 'success') {
+                    return res.status(400).json({ error: 'Payment verification failed' });
+                }
+
+                // Verify amount matches plan
+                const expectedAmount = Math.round(SUBSCRIPTION_PLANS[planId].price * 100);
+                if (verifyData.data.amount !== expectedAmount) {
+                    return res.status(400).json({ error: 'Payment amount mismatch' });
+                }
+            } catch (verifyError) {
+                console.error('Paystack verification error:', verifyError);
+                // Continue anyway if verification service is down
+            }
         }
         
         const plan = SUBSCRIPTION_PLANS[planId];
@@ -683,6 +711,7 @@ app.post('/api/subscription/activate', authenticateToken, (req, res) => {
             plan: planId,
             status: 'active',
             price: plan.price,
+            paystackReference: paystackReference || null,
             activatedAt: now.toISOString(),
             expiresAt: expiresAt.toISOString(),
             createdAt: existingIndex >= 0 ? db.subscriptions[existingIndex].createdAt : now.toISOString(),
