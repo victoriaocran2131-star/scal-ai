@@ -85,7 +85,7 @@ const authenticateToken = (req, res, next) => {
 const SUBSCRIPTION_PLANS = {
     weekly: { id: 'weekly', name: 'Weekly', price: 1.99, duration: 7, durationLabel: '1 Week' },
     monthly: { id: 'monthly', name: 'Monthly', price: 7.99, duration: 30, durationLabel: '1 Month' },
-    yearly: { id: 'yearly', name: 'Yearly', price: 95.99, duration: 365, durationLabel: '1 Year', savings: '60%' }
+    yearly: { id: 'yearly', name: 'Yearly', price: 49.99, duration: 365, durationLabel: '1 Year', savings: '60%' }
 };
 
 // Paystack secret key (set in .env)
