@@ -81,15 +81,16 @@ const authenticateToken = (req, res, next) => {
     }
 };
 
+// Paystack configuration
+const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || 'sk_live_d3558a0f29e9e8e2a8593ba913a69fbda3c0b64d';
+const PAYSTACK_WEBHOOK_SECRET = process.env.PAYSTACK_WEBHOOK_SECRET || '';
+
 // Subscription plans
 const SUBSCRIPTION_PLANS = {
     weekly: { id: 'weekly', name: 'Weekly', price: 1.99, duration: 7, durationLabel: '1 Week' },
     monthly: { id: 'monthly', name: 'Monthly', price: 7.99, duration: 30, durationLabel: '1 Month' },
     yearly: { id: 'yearly', name: 'Yearly', price: 49.99, duration: 365, durationLabel: '1 Year', savings: '60%' }
 };
-
-// Paystack secret key (set in .env)
-const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || '';
 
 // Google OAuth - works with any Google account
 const googleClient = new OAuth2Client();
@@ -764,6 +765,83 @@ app.post('/api/subscription/cancel', authenticateToken, (req, res) => {
         
     } catch (error) {
         res.status(500).json({ error: 'Failed to cancel subscription' });
+    }
+});
+
+// Paystack Webhook Endpoint
+app.post('/api/webhook/paystack', express.raw({ type: 'application/json' }), (req, res) => {
+    try {
+        const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+        const event = body.event;
+
+        console.log('Paystack webhook received:', event);
+
+        if (event === 'charge.success') {
+            const data = body.data;
+            const email = data.customer.email;
+            const reference = data.reference;
+            const amount = data.amount / 100; // Convert from kobo to dollars
+
+            const db = loadDB();
+            
+            // Find user by email
+            const user = db.users.find(u => u.email === email);
+            if (!user) {
+                console.log('User not found for email:', email);
+                return res.json({ received: true });
+            }
+
+            // Determine plan from amount
+            let planId = null;
+            let duration = 0;
+            
+            if (amount >= 49.99) {
+                planId = 'yearly';
+                duration = 365;
+            } else if (amount >= 7.99) {
+                planId = 'monthly';
+                duration = 30;
+            } else if (amount >= 1.99) {
+                planId = 'weekly';
+                duration = 7;
+            }
+
+            if (planId) {
+                if (!db.subscriptions) db.subscriptions = [];
+                
+                const now = new Date();
+                const expiresAt = new Date(now.getTime() + duration * 24 * 60 * 60 * 1000);
+                
+                const existingIndex = db.subscriptions.findIndex(s => s.userId === user.id);
+                
+                const subscriptionData = {
+                    id: existingIndex >= 0 ? db.subscriptions[existingIndex].id : uuidv4(),
+                    userId: user.id,
+                    plan: planId,
+                    status: 'active',
+                    price: amount,
+                    paystackReference: reference,
+                    activatedAt: now.toISOString(),
+                    expiresAt: expiresAt.toISOString(),
+                    createdAt: existingIndex >= 0 ? db.subscriptions[existingIndex].createdAt : now.toISOString(),
+                    updatedAt: now.toISOString()
+                };
+                
+                if (existingIndex >= 0) {
+                    db.subscriptions[existingIndex] = subscriptionData;
+                } else {
+                    db.subscriptions.push(subscriptionData);
+                }
+                
+                saveDB(db);
+                console.log(`Subscription activated for user ${email}: ${planId}`);
+            }
+        }
+
+        res.json({ received: true });
+    } catch (error) {
+        console.error('Webhook error:', error);
+        res.status(500).json({ error: 'Webhook processing failed' });
     }
 });
 

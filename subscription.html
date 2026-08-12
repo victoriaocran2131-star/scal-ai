@@ -95,6 +95,12 @@
 
     <script src="config.js"></script>
     <script>
+        const PAYMENT_LINKS = {
+            weekly: 'https://paystack.shop/pay/4i-jmyzb7y',
+            monthly: 'https://paystack.shop/pay/iacumhzgpu',
+            yearly: 'https://paystack.shop/pay/wwfe5di8p3'
+        };
+
         class SubscriptionApp {
             constructor() {
                 this.token = localStorage.getItem('scalai_token');
@@ -178,7 +184,7 @@
                 document.getElementById('selectedPlanPrice').textContent = '$' + plan.price + ' / ' + plan.durationLabel;
             }
             
-            async confirmSubscription() {
+            confirmSubscription() {
                 if (!this.selectedPlan) return;
                 
                 if (!this.token) {
@@ -187,44 +193,10 @@
                     return;
                 }
                 
-                const overlay = document.getElementById('processingOverlay');
-                const errorMsg = document.getElementById('errorMessage');
-                const successMsg = document.getElementById('successMessage');
-                
-                overlay.style.display = 'flex';
-                errorMsg.style.display = 'none';
-                successMsg.style.display = 'none';
-                
-                try {
-                    const response = await fetch(API_BASE + '/api/subscription/activate', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${this.token}`
-                        },
-                        body: JSON.stringify({ planId: this.selectedPlan })
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (!response.ok) {
-                        throw new Error(data.error || 'Failed to activate subscription');
-                    }
-                    
-                    localStorage.setItem('hasActiveSubscription', 'true');
-                    
-                    successMsg.textContent = 'Subscription activated! Redirecting to app...';
-                    successMsg.style.display = 'block';
-                    overlay.style.display = 'none';
-                    
-                    setTimeout(() => {
-                        window.location.href = 'index.html';
-                    }, 1500);
-                    
-                } catch (error) {
-                    errorMsg.textContent = error.message;
-                    errorMsg.style.display = 'block';
-                    overlay.style.display = 'none';
+                // Redirect to Paystack payment link
+                const paymentUrl = PAYMENT_LINKS[this.selectedPlan];
+                if (paymentUrl) {
+                    window.location.href = paymentUrl;
                 }
             }
         }
