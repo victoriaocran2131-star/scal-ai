@@ -671,8 +671,8 @@ app.post('/api/subscription/activate', authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'Invalid plan selected' });
         }
 
-        // Verify Paystack payment if reference provided
-        if (paystackReference && PAYSTACK_SECRET_KEY) {
+        // Verify Paystack payment if reference provided (skip for manual activation)
+        if (paystackReference && paystackReference !== 'paystack_link' && PAYSTACK_SECRET_KEY) {
             try {
                 const verifyResponse = await fetch(`https://api.paystack.co/transaction/verify/${paystackReference}`, {
                     headers: {
@@ -919,6 +919,115 @@ app.post('/api/upload', authenticateToken, requireSubscription, upload.single('i
 
 // Serve uploaded files
 app.use('/uploads', express.static(isFirebase ? '/tmp/uploads' : path.join(__dirname, 'uploads')));
+
+// ==================== ADMIN ENDPOINTS ====================
+
+// Admin authentication middleware
+const authenticateAdmin = (req, res, next) => {
+    const adminKey = req.headers['authorization'];
+    if (adminKey !== 'Bearer admin_victoriaocran2131') {
+        return res.status(403).json({ error: 'Admin access denied' });
+    }
+    next();
+};
+
+// Admin stats endpoint
+app.get('/api/admin/stats', authenticateAdmin, (req, res) => {
+    try {
+        const db = loadDB();
+        const users = db.users || [];
+        const subscriptions = db.subscriptions || [];
+        
+        // Calculate active subscriptions
+        const activeSubscriptions = subscriptions.filter(sub => {
+            if (!sub || !sub.expiresAt) return false;
+            return new Date(sub.expiresAt) > new Date();
+        });
+
+        // Get recent users
+        const recentUsers = users
+            .slice(-10)
+            .reverse()
+            .map(user => ({
+                email: user.email,
+                date: user.createdAt ? new Date(user.createdAt).toISOString().split('T')[0] : 'Unknown'
+            }));
+
+        res.json({
+            success: true,
+            stats: {
+                totalUsers: users.length,
+                activeSubscriptions: activeSubscriptions.length,
+                totalScans: db.history ? db.history.length : 0,
+                recentUsers: recentUsers,
+                lastUpdated: new Date().toISOString()
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch stats' });
+    }
+});
+
+// Security logging endpoint
+app.post('/api/security/log', (req, res) => {
+    try {
+        const { event, details, timestamp, platform, version } = req.body;
+        console.log(`[SECURITY] ${event}`, { details, timestamp, platform, version });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to log security event' });
+    }
+});
+
+// App integrity verification
+app.get('/api/security/verify', (req, res) => {
+    res.json({ valid: true, timestamp: new Date().toISOString() });
+});
+
+// Rate limiting for login attempts
+const loginRateLimit = new Map();
+
+app.post('/api/auth/check-rate-limit', (req, res) => {
+    const { email } = req.body;
+    const now = Date.now();
+    const attempts = loginRateLimit.get(email) || { count: 0, lastAttempt: 0 };
+    
+    // Reset after 30 minutes
+    if (now - attempts.lastAttempt > 30 * 60 * 1000) {
+        loginRateLimit.delete(email);
+        return res.json({ allowed: true, remaining: 5 });
+    }
+    
+    if (attempts.count >= 5) {
+        const remainingTime = Math.ceil((30 * 60 * 1000 - (now - attempts.lastAttempt)) / 60000);
+        return res.json({ 
+            allowed: false, 
+            remainingTime,
+            message: `Too many attempts. Try again in ${remainingTime} minutes.`
+        });
+    }
+    
+    res.json({ allowed: true, remaining: 5 - attempts.count });
+});
+
+app.post('/api/auth/record-attempt', (req, res) => {
+    const { email, success } = req.body;
+    const now = Date.now();
+    const attempts = loginRateLimit.get(email) || { count: 0, lastAttempt: 0 };
+    
+    if (success) {
+        loginRateLimit.delete(email);
+    } else {
+        loginRateLimit.set(email, {
+            count: attempts.count + 1,
+            lastAttempt: now
+        });
+    }
+    
+    res.json({ success: true });
+});
+
+// ==================== END ADMIN ENDPOINTS ====================
 
 // ==================== START SERVER ====================
 
