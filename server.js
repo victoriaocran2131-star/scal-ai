@@ -853,7 +853,12 @@ app.get('/api/subscription/check', authenticateToken, (req, res) => {
     
     res.json({
         success: true,
-        hasActiveSubscription: hasActive
+        hasActiveSubscription: hasActive,
+        subscription: hasActive ? {
+            plan: subscription.plan,
+            expiresAt: subscription.expiresAt,
+            daysRemaining: Math.ceil((new Date(subscription.expiresAt) - new Date()) / (1000 * 60 * 60 * 24))
+        } : null
     });
 });
 
