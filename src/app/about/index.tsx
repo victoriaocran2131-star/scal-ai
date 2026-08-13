@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { Image, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, FontSize, Spacing } from '../../src/constants/theme';
+import { Colors, FontSize, Spacing } from '../../constants/theme';
 
 export default function AboutScreen() {
   return (

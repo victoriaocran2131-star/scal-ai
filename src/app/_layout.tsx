@@ -39,7 +39,6 @@ export default function RootLayout() {
         <Stack.Screen name="subscription/index" />
         <Stack.Screen name="history/index" />
         <Stack.Screen name="about/index" />
-        <Stack.Screen name="admin/index" />
         <Stack.Screen name="profile/index" />
       </Stack>
     </SafeAreaProvider>

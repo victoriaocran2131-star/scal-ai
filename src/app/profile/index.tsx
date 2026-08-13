@@ -11,8 +11,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, FontSize, Spacing } from '../../src/constants/theme';
-import { api } from '../../src/services/api';
+import { Colors, FontSize, Spacing } from '../../constants/theme';
+import { api } from '../../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function ProfileScreen() {

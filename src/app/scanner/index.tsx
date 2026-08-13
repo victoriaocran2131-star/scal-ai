@@ -4,7 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useRef, useState } from 'react';
 import { Keyboard, ScrollView, Animated, TextInput } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { scheduleLocalNotification } from '../../src/services/notifications';
+import { scheduleLocalNotification } from '../../services/notifications';
 import {
   ActivityIndicator,
   Alert,
@@ -15,11 +15,11 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, FontSize, Spacing } from '../../src/constants/theme';
-import { api } from '../../src/services/api';
-import { searchFood, getRandomFood } from '../../src/data/foodDatabase';
-import KidneyDiagram from '../../src/components/KidneyDiagram';
-import ScanResult3D from '../../src/components/ScanResult3D';
+import { Colors, FontSize, Spacing } from '../../constants/theme';
+import { api } from '../../services/api';
+import { searchFood, getRandomFood } from '../../data/foodDatabase';
+import KidneyDiagram from '../../components/KidneyDiagram';
+import ScanResult3D from '../../components/ScanResult3D';
 
 export default function ScannerScreen() {
   const [permission, requestPermission] = useCameraPermissions();
