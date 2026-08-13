@@ -11,8 +11,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { api } from '../../services/api';
-import { Colors, FontSize, Spacing } from '../../constants/theme';
+import { api } from '../../src/services/api';
+import { Colors, FontSize, Spacing } from '../../src/constants/theme';
 
 export default function SignInScreen() {
   const [email, setEmail] = useState('');
