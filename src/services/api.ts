@@ -1,6 +1,25 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const API_URL = 'https://scal-ai-pbu8.onrender.com';
+import { auth, db } from './firebase';
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+} from 'firebase/auth';
+import {
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  doc,
+  query,
+  where,
+  orderBy,
+  serverTimestamp,
+  setDoc,
+  getDoc,
+  Timestamp,
+} from 'firebase/firestore';
 
 interface ApiResponse<T = any> {
   success?: boolean;
@@ -11,99 +30,94 @@ interface ApiResponse<T = any> {
   log?: any;
   user?: any;
   token?: string;
+  hasActiveSubscription?: boolean;
+  subscription?: any;
+  goals?: any;
 }
 
 class ApiService {
-  private token: string | null = null;
+  private currentUser: any = null;
 
-  async setToken(token: string) {
-    this.token = token;
-    await AsyncStorage.setItem('authToken', token);
+  constructor() {
+    onAuthStateChanged(auth, (user) => {
+      this.currentUser = user;
+    });
   }
 
-  async getToken(): Promise<string | null> {
-    if (!this.token) {
-      this.token = await AsyncStorage.getItem('authToken');
-    }
-    return this.token;
-  }
-
-  async clearToken() {
-    this.token = null;
-    await AsyncStorage.removeItem('authToken');
-  }
-
-  private async getHeaders(): Promise<HeadersInit> {
-    const token = await this.getToken();
-    return {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
+  private getUserId(): string | null {
+    return this.currentUser?.uid || auth.currentUser?.uid || null;
   }
 
   async signup(fullName: string, email: string, password: string): Promise<ApiResponse> {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
-      
-      const response = await fetch(`${API_URL}/api/auth/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fullName, email, password }),
-        signal: controller.signal,
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      await setDoc(doc(db, 'users', user.uid), {
+        fullName,
+        email,
+        createdAt: serverTimestamp(),
       });
-      
-      clearTimeout(timeoutId);
-      const data = await response.json();
-      if (data.token) {
-        await this.setToken(data.token);
-      }
-      return data;
+
+      await AsyncStorage.setItem('scalai_user', JSON.stringify({
+        uid: user.uid,
+        fullName,
+        email,
+      }));
+
+      return { success: true, user: { uid: user.uid, fullName, email } };
     } catch (error: any) {
-      if (error.name === 'AbortError') {
-        return { error: 'Server is waking up. Please try again in 30 seconds.' };
-      }
-      return { error: 'Network error. Please try again.' };
+      const message = error.code === 'auth/email-already-in-use'
+        ? 'An account with this email already exists.'
+        : error.message || 'Failed to create account';
+      return { error: message };
     }
   }
 
   async signin(email: string, password: string): Promise<ApiResponse> {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
-      
-      const response = await fetch(`${API_URL}/api/auth/signin`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
-      const data = await response.json();
-      if (data.token) {
-        await this.setToken(data.token);
-      }
-      return data;
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const userData = userDoc.data();
+
+      await AsyncStorage.setItem('scalai_user', JSON.stringify({
+        uid: user.uid,
+        fullName: userData?.fullName || '',
+        email,
+      }));
+
+      return { success: true, user: { uid: user.uid, fullName: userData?.fullName, email } };
     } catch (error: any) {
-      if (error.name === 'AbortError') {
-        return { error: 'Server is waking up. Please try again in 30 seconds.' };
-      }
-      return { error: 'Network error. Please try again.' };
+      const message = error.code === 'auth/user-not-found'
+        ? 'No account found with this email.'
+        : error.code === 'auth/wrong-password'
+        ? 'Incorrect password.'
+        : error.message || 'Failed to sign in';
+      return { error: message };
     }
+  }
+
+  async signOut(): Promise<void> {
+    await signOut(auth);
+    await AsyncStorage.removeItem('scalai_user');
+    await AsyncStorage.removeItem('hasActiveSubscription');
+    await AsyncStorage.removeItem('subscriptionInfo');
   }
 
   async getProfile(): Promise<ApiResponse> {
     try {
-      const headers = await this.getHeaders();
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
-      const response = await fetch(`${API_URL}/api/auth/profile`, { headers, signal: controller.signal });
-      clearTimeout(timeoutId);
-      return await response.json();
+      const uid = this.getUserId();
+      if (!uid) return { error: 'Not authenticated' };
+
+      const userDoc = await getDoc(doc(db, 'users', uid));
+      if (userDoc.exists()) {
+        return { success: true, user: userDoc.data() };
+      }
+      return { error: 'User not found' };
     } catch (error: any) {
-      if (error.name === 'AbortError') return { error: 'Request timed out. Please try again.' };
-      return { error: 'Network error' };
+      return { error: 'Failed to load profile' };
     }
   }
 
@@ -119,189 +133,232 @@ class ApiService {
     image?: string;
   }): Promise<ApiResponse> {
     try {
-      const headers = await this.getHeaders();
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
-      const response = await fetch(`${API_URL}/api/history`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(item),
-        signal: controller.signal,
+      const uid = this.getUserId();
+      if (!uid) return { error: 'Not authenticated' };
+
+      await addDoc(collection(db, 'users', uid, 'history'), {
+        ...item,
+        createdAt: serverTimestamp(),
       });
-      clearTimeout(timeoutId);
-      return await response.json();
+
+      return { success: true };
     } catch (error: any) {
-      if (error.name === 'AbortError') return { error: 'Request timed out.' };
-      return { error: 'Network error' };
+      return { error: 'Failed to save history' };
     }
   }
 
   async getHistory(filter: string = 'all'): Promise<ApiResponse> {
     try {
-      const headers = await this.getHeaders();
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
-      const response = await fetch(`${API_URL}/api/history?filter=${filter}`, {
-        headers,
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-      return await response.json();
+      const uid = this.getUserId();
+      if (!uid) return { error: 'Not authenticated' };
+
+      const historyRef = collection(db, 'users', uid, 'history');
+      let q = query(historyRef, orderBy('createdAt', 'desc'));
+
+      if (filter === 'today') {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        q = query(historyRef, where('createdAt', '>=', Timestamp.fromDate(today)), orderBy('createdAt', 'desc'));
+      } else if (filter === 'week') {
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        q = query(historyRef, where('createdAt', '>=', Timestamp.fromDate(weekAgo)), orderBy('createdAt', 'desc'));
+      } else if (filter === 'month') {
+        const monthAgo = new Date();
+        monthAgo.setMonth(monthAgo.getMonth() - 1);
+        q = query(historyRef, where('createdAt', '>=', Timestamp.fromDate(monthAgo)), orderBy('createdAt', 'desc'));
+      }
+
+      const snapshot = await getDocs(q);
+      const history = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+      }));
+
+      return { success: true, history };
     } catch (error: any) {
-      if (error.name === 'AbortError') return { error: 'Request timed out.' };
-      return { error: 'Network error' };
+      return { error: 'Failed to load history' };
     }
   }
 
   async deleteHistory(id: string): Promise<ApiResponse> {
     try {
-      const headers = await this.getHeaders();
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
-      const response = await fetch(`${API_URL}/api/history/${id}`, {
-        method: 'DELETE',
-        headers,
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-      return await response.json();
+      const uid = this.getUserId();
+      if (!uid) return { error: 'Not authenticated' };
+
+      await deleteDoc(doc(db, 'users', uid, 'history', id));
+      return { success: true };
     } catch (error: any) {
-      if (error.name === 'AbortError') return { error: 'Request timed out.' };
-      return { error: 'Network error' };
+      return { error: 'Failed to delete history' };
     }
   }
 
   async clearHistory(): Promise<ApiResponse> {
     try {
-      const headers = await this.getHeaders();
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
-      const response = await fetch(`${API_URL}/api/history`, {
-        method: 'DELETE',
-        headers,
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-      return await response.json();
+      const uid = this.getUserId();
+      if (!uid) return { error: 'Not authenticated' };
+
+      const snapshot = await getDocs(collection(db, 'users', uid, 'history'));
+      for (const docSnap of snapshot.docs) {
+        await deleteDoc(docSnap.ref);
+      }
+      return { success: true };
     } catch (error: any) {
-      if (error.name === 'AbortError') return { error: 'Request timed out.' };
-      return { error: 'Network error' };
+      return { error: 'Failed to clear history' };
     }
   }
 
   async getStats(): Promise<ApiResponse> {
     try {
-      const headers = await this.getHeaders();
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
-      const response = await fetch(`${API_URL}/api/stats`, { headers, signal: controller.signal });
-      clearTimeout(timeoutId);
-      return await response.json();
+      const uid = this.getUserId();
+      if (!uid) return { error: 'Not authenticated' };
+
+      const snapshot = await getDocs(collection(db, 'users', uid, 'history'));
+      const items = snapshot.docs.map((doc) => doc.data());
+
+      const totalCalories = items.reduce((sum, item) => sum + (item.calories || 0), 0);
+      const totalProtein = items.reduce((sum, item) => sum + (item.protein || 0), 0);
+      const totalFat = items.reduce((sum, item) => sum + (item.fat || 0), 0);
+      const totalScans = items.length;
+
+      return {
+        success: true,
+        stats: { totalCalories, totalProtein, totalFat, totalScans },
+      };
     } catch (error: any) {
-      if (error.name === 'AbortError') return { error: 'Request timed out.' };
-      return { error: 'Network error' };
+      return { error: 'Failed to load stats' };
     }
   }
 
   async getTodayLog(): Promise<ApiResponse> {
     try {
-      const headers = await this.getHeaders();
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
-      const response = await fetch(`${API_URL}/api/daily-logs/today`, {
-        headers,
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-      return await response.json();
-    } catch (error: any) {
-      if (error.name === 'AbortError') return { error: 'Request timed out.' };
-      return { error: 'Network error' };
-    }
-  }
+      const uid = this.getUserId();
+      if (!uid) return { log: { totalCalories: 0, totalProtein: 0, totalFat: 0, totalCarbs: 0 } };
 
-  async subscribe(planId: string): Promise<ApiResponse> {
-    try {
-      const headers = await this.getHeaders();
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
-      const response = await fetch(`${API_URL}/api/subscription/activate`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ planId }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-      return await response.json();
-    } catch (error: any) {
-      if (error.name === 'AbortError') return { error: 'Server is waking up. Please try again.' };
-      return { error: 'Network error' };
-    }
-  }
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-  async activateSubscription(planId: string, paystackReference: string): Promise<ApiResponse> {
-    try {
-      const headers = await this.getHeaders();
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
-      const response = await fetch(`${API_URL}/api/subscription/activate`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ planId, paystackReference }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-      return await response.json();
+      const q = query(
+        collection(db, 'users', uid, 'history'),
+        where('createdAt', '>=', Timestamp.fromDate(today))
+      );
+
+      const snapshot = await getDocs(q);
+      const items = snapshot.docs.map((doc) => doc.data());
+
+      const log = {
+        totalCalories: items.reduce((sum, item) => sum + (item.calories || 0), 0),
+        totalProtein: items.reduce((sum, item) => sum + (item.protein || 0), 0),
+        totalFat: items.reduce((sum, item) => sum + (item.fat || 0), 0),
+        totalCarbs: items.reduce((sum, item) => sum + (item.carbs || 0), 0),
+      };
+
+      return { success: true, log };
     } catch (error: any) {
-      if (error.name === 'AbortError') return { error: 'Server is waking up. Please try again.' };
-      return { error: 'Network error' };
+      return { log: { totalCalories: 0, totalProtein: 0, totalFat: 0, totalCarbs: 0 } };
     }
   }
 
   async checkSubscription(): Promise<ApiResponse> {
     try {
-      const headers = await this.getHeaders();
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
-      const response = await fetch(`${API_URL}/api/subscription/check`, {
-        headers,
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-      const data = await response.json();
-      
-      // Store subscription info locally for offline checks
-      if (data.hasActiveSubscription && data.subscription) {
-        await AsyncStorage.setItem('subscriptionInfo', JSON.stringify(data.subscription));
-      } else {
-        await AsyncStorage.removeItem('subscriptionInfo');
-        await AsyncStorage.removeItem('hasActiveSubscription');
+      const uid = this.getUserId();
+      if (!uid) return { hasActiveSubscription: false };
+
+      const subDoc = await getDoc(doc(db, 'users', uid, 'subscription', 'current'));
+      if (subDoc.exists()) {
+        const sub = subDoc.data();
+        const endDate = sub.endDate?.toDate?.();
+        if (endDate && endDate > new Date()) {
+          const daysRemaining = Math.ceil((endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+          return {
+            success: true,
+            hasActiveSubscription: true,
+            subscription: {
+              plan: sub.plan,
+              daysRemaining,
+              endDate: endDate.toISOString(),
+            },
+          };
+        }
       }
-      
-      return data;
+
+      return { hasActiveSubscription: false };
     } catch (error: any) {
-      if (error.name === 'AbortError') return { error: 'Request timed out.' };
-      return { error: 'Network error' };
+      const localSub = await AsyncStorage.getItem('hasActiveSubscription');
+      if (localSub === 'true') {
+        return { hasActiveSubscription: true };
+      }
+      return { hasActiveSubscription: false };
+    }
+  }
+
+  async activateSubscription(planId: string, paystackReference?: string): Promise<ApiResponse> {
+    try {
+      const uid = this.getUserId();
+      if (!uid) return { error: 'Not authenticated' };
+
+      const now = new Date();
+      let endDate = new Date(now);
+
+      switch (planId) {
+        case 'weekly':
+          endDate.setDate(endDate.getDate() + 7);
+          break;
+        case 'monthly':
+          endDate.setMonth(endDate.getMonth() + 1);
+          break;
+        case 'yearly':
+          endDate.setFullYear(endDate.getFullYear() + 1);
+          break;
+        default:
+          endDate.setMonth(endDate.getMonth() + 1);
+      }
+
+      await setDoc(doc(db, 'users', uid, 'subscription', 'current'), {
+        plan: planId,
+        startDate: Timestamp.fromDate(now),
+        endDate: Timestamp.fromDate(endDate),
+        paystackReference: paystackReference || null,
+        activatedAt: serverTimestamp(),
+      });
+
+      await AsyncStorage.setItem('hasActiveSubscription', 'true');
+      await AsyncStorage.setItem('subscriptionInfo', JSON.stringify({
+        plan: planId,
+        daysRemaining: Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)),
+      }));
+
+      return { success: true };
+    } catch (error: any) {
+      return { error: 'Failed to activate subscription' };
+    }
+  }
+
+  async subscribe(planId: string): Promise<ApiResponse> {
+    return this.activateSubscription(planId);
+  }
+
+  async getGoals(): Promise<ApiResponse> {
+    try {
+      const uid = this.getUserId();
+      if (!uid) return { goals: { calories: 2000, protein: 50, fat: 65, carbs: 300 } };
+
+      const goalsDoc = await getDoc(doc(db, 'users', uid, 'settings', 'goals'));
+      if (goalsDoc.exists()) {
+        return { success: true, goals: goalsDoc.data() };
+      }
+      return { goals: { calories: 2000, protein: 50, fat: 65, carbs: 300 } };
+    } catch (error: any) {
+      return { goals: { calories: 2000, protein: 50, fat: 65, carbs: 300 } };
     }
   }
 
   async request(endpoint: string, options: { method?: string; body?: any } = {}): Promise<ApiResponse> {
-    try {
-      const headers = await this.getHeaders();
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
-      const response = await fetch(`${API_URL}${endpoint}`, {
-        method: options.method || 'GET',
-        headers,
-        body: options.body ? JSON.stringify(options.body) : undefined,
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-      return await response.json();
-    } catch (error: any) {
-      if (error.name === 'AbortError') return { error: 'Request timed out.' };
-      return { error: 'Network error' };
-    }
+    if (endpoint === '/api/goals') return this.getGoals();
+    if (endpoint === '/api/daily-logs/today') return this.getTodayLog();
+    if (endpoint === '/api/stats') return this.getStats();
+    return { error: 'Unknown endpoint' };
   }
 }
 

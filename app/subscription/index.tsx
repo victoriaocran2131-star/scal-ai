@@ -164,11 +164,32 @@ export default function SubscriptionScreen() {
             Complete your payment in the browser.
           </Text>
           <Text style={styles.waitingText}>
-            Your subscription will activate automatically once payment is confirmed.
+            After payment, tap the button below to activate your subscription.
           </Text>
           <Text style={styles.waitingSubtext}>
             Use the same email you signed up with.
           </Text>
+          <TouchableOpacity
+            style={[styles.cancelButton, { backgroundColor: Colors.gold, borderRadius: 12, paddingHorizontal: 24 }]}
+            onPress={async () => {
+              stopPolling();
+              if (selectedPlan) {
+                const result = await api.activateSubscription(selectedPlan.id);
+                if (result.success) {
+                  await AsyncStorage.setItem('hasActiveSubscription', 'true');
+                  Alert.alert(
+                    'Subscription Active!',
+                    'Your subscription has been activated. You can now scan food!',
+                    [{ text: 'Start Scanning', onPress: () => router.push('/scanner') }]
+                  );
+                } else {
+                  Alert.alert('Error', result.error || 'Failed to activate subscription');
+                }
+              }
+            }}
+          >
+            <Text style={[styles.cancelButtonText, { color: Colors.black, fontWeight: 'bold' }]}>I've Completed Payment</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.cancelButton} onPress={stopPolling}>
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>

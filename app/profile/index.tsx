@@ -71,10 +71,7 @@ export default function ProfileScreen() {
           text: 'Sign Out',
           style: 'destructive',
           onPress: async () => {
-            await api.clearToken();
-            await AsyncStorage.removeItem('scalai_user');
-            await AsyncStorage.removeItem('hasActiveSubscription');
-            await AsyncStorage.removeItem('subscriptionInfo');
+            await api.signOut();
             router.replace('/signin');
           },
         },
@@ -92,7 +89,7 @@ export default function ProfileScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            await api.clearToken();
+            await api.signOut();
             await AsyncStorage.clear();
             router.replace('/welcome');
           },
