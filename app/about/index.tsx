@@ -66,8 +66,25 @@ export default function AboutScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.version}>Version 1.0.0</Text>
+        <Text style={styles.version}>Version 1.0.8</Text>
         <Text style={styles.copyright}>© 2026 Scal AI. All rights reserved.</Text>
+
+        {/* Hidden admin access - tap version number 5 times */}
+        <TouchableOpacity
+          style={styles.adminAccess}
+          onPress={() => {
+            // @ts-ignore
+            global.adminTapCount = ((global.adminTapCount || 0) + 1);
+            // @ts-ignore
+            if (global.adminTapCount >= 5) {
+              // @ts-ignore
+              global.adminTapCount = 0;
+              router.push('/admin');
+            }
+          }}
+        >
+          <Text style={styles.adminAccessText}>v1.0.8</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -177,5 +194,14 @@ const styles = StyleSheet.create({
     color: Colors.gray,
     textAlign: 'center',
     marginTop: Spacing.sm,
+  },
+  adminAccess: {
+    marginTop: Spacing.xl,
+    alignItems: 'center',
+    padding: Spacing.md,
+  },
+  adminAccessText: {
+    color: 'rgba(255,255,255,0.2)',
+    fontSize: 10,
   },
 });

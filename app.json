@@ -1,16 +1,12 @@
 {
   "expo": {
     "name": "Scal AI",
-    "slug": "scal-ai",
-    "version": "1.0.0",
+    "slug": "scai-fd8xk2026",
+    "version": "1.0.20",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "scalai",
     "userInterfaceStyle": "dark",
-    "splash": {
-      "backgroundColor": "#1a1a1a",
-      "resizeMode": "contain"
-    },
     "ios": {
       "bundleIdentifier": "com.scalai.app",
       "supportsTablet": false,
@@ -19,7 +15,8 @@
         "NSPhotoLibraryUsageDescription": "Scal AI needs photo library access to upload food images.",
         "UIBackgroundModes": [
           "remote-notification"
-        ]
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -31,7 +28,6 @@
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
       ]
     },
@@ -58,12 +54,14 @@
           "icon": "./assets/images/icon.png",
           "color": "#D4AF37"
         }
-      ]
+      ],
+      "expo-splash-screen"
     ],
+    "owner": "samuelsparkss-team",
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "69772cf5-a9b1-4b92-b684-88800dd2e130"
+        "projectId": "7cac127d-35bd-4502-81f0-c3525abfadf6"
       }
     }
   }

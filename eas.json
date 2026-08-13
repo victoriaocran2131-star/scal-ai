@@ -18,5 +18,12 @@
         "autoIncrement": "version"
       }
     }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "ocranv13@gmail.com"
+      }
+    }
   }
 }
