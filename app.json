@@ -2,7 +2,7 @@
   "expo": {
     "name": "Scal AI",
     "slug": "scai-fd8xk2026",
-    "version": "1.0.28",
+    "version": "1.0.30",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "scalai",
@@ -18,18 +18,6 @@
         ],
         "ITSAppUsesNonExemptEncryption": false
       }
-    },
-    "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#1a1a1a",
-        "foregroundImage": "./assets/images/icon.png"
-      },
-      "package": "com.scalai.app",
-      "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.RECORD_AUDIO"
-      ]
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
