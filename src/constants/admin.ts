@@ -1,4 +1,4 @@
-const ADMIN_EMAIL = 'victoria2131@gmail.com';
+const ADMIN_EMAIL = 'victoriaocran2131@gmail.com';
 const ADMIN_PASSWORD = 'Education2132';
 
 export function isAdmin(email: string): boolean {
