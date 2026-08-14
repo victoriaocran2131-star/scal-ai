@@ -3,9 +3,11 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useEffect } from 'react';
 import { registerForPushNotificationsAsync, addNotificationListeners } from '../services/notifications';
+import { security } from '../services/security';
 
 export default function RootLayout() {
   useEffect(() => {
+    security.checkDeviceIntegrity();
     registerForPushNotificationsAsync();
 
     const removeListeners = addNotificationListeners(

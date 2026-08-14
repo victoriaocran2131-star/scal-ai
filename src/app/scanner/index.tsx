@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Keyboard, Animated } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { scheduleLocalNotification } from '../../services/notifications';
+import { security } from '../../services/security';
 import {
   ActivityIndicator,
   Alert,
@@ -34,6 +35,7 @@ export default function ScannerScreen() {
 
   useEffect(() => {
     Keyboard.dismiss();
+    checkSecurity();
     checkSubscription();
     loadGoals();
     loadTodayLog();
@@ -45,6 +47,18 @@ export default function ScannerScreen() {
       ])
     ).start();
   }, [permission]);
+
+  const checkSecurity = async () => {
+    if (__DEV__) return;
+    const result = await security.checkDeviceIntegrity();
+    if (!result.secure) {
+      Alert.alert(
+        'Security Warning',
+        result.reason || 'This device cannot run this app.',
+        [{ text: 'OK', onPress: () => {} }]
+      );
+    }
+  };
 
   const checkSubscription = async () => {
     try {

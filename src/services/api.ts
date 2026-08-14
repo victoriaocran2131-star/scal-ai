@@ -20,6 +20,7 @@ import {
   getDoc,
   Timestamp,
 } from 'firebase/firestore';
+import { isAdmin } from '../constants/admin';
 
 interface ApiResponse<T = any> {
   success?: boolean;
@@ -87,6 +88,10 @@ class ApiService {
         fullName: userData?.fullName || '',
         email,
       }));
+
+      if (isAdmin(email)) {
+        await AsyncStorage.setItem('isAdmin', 'true');
+      }
 
       return { success: true, user: { uid: user.uid, fullName: userData?.fullName, email } };
     } catch (error: any) {
@@ -265,6 +270,16 @@ class ApiService {
       const uid = this.getUserId();
       if (!uid) return { hasActiveSubscription: false };
 
+      const userDoc = await getDoc(doc(db, 'users', uid));
+      const userData = userDoc.data();
+      if (userData?.email && isAdmin(userData.email)) {
+        return {
+          success: true,
+          hasActiveSubscription: true,
+          subscription: { plan: 'admin', daysRemaining: 36500 },
+        };
+      }
+
       const subDoc = await getDoc(doc(db, 'users', uid, 'subscription', 'current'));
       if (subDoc.exists()) {
         const sub = subDoc.data();
@@ -286,6 +301,10 @@ class ApiService {
       return { hasActiveSubscription: false };
     } catch (error: any) {
       const localSub = await AsyncStorage.getItem('hasActiveSubscription');
+      const adminFlag = await AsyncStorage.getItem('isAdmin');
+      if (adminFlag === 'true') {
+        return { hasActiveSubscription: true, subscription: { plan: 'admin', daysRemaining: 36500 } };
+      }
       if (localSub === 'true') {
         return { hasActiveSubscription: true };
       }
