@@ -2,3 +2,14 @@ node_modules/
 database.json
 uploads/
 .env
+android/
+ios/
+www/
+dist/
+.expo/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
