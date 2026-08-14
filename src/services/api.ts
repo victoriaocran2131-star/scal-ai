@@ -9,18 +9,15 @@ import {
 import {
   collection,
   addDoc,
-  getDocs,
-  deleteDoc,
   doc,
-  query,
-  where,
-  orderBy,
   serverTimestamp,
   setDoc,
   getDoc,
   Timestamp,
 } from 'firebase/firestore';
 import { isAdmin } from '../constants/admin';
+
+const HISTORY_KEY = 'scalai_history';
 
 interface ApiResponse<T = any> {
   success?: boolean;
@@ -29,6 +26,7 @@ interface ApiResponse<T = any> {
   history?: any[];
   stats?: any;
   log?: any;
+  logs?: any[];
   user?: any;
   token?: string;
   hasActiveSubscription?: boolean;
@@ -48,6 +46,21 @@ class ApiService {
   private getUserId(): string | null {
     return this.currentUser?.uid || auth.currentUser?.uid || null;
   }
+
+  private async getHistoryLocal(): Promise<any[]> {
+    try {
+      const raw = await AsyncStorage.getItem(HISTORY_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private async saveHistoryLocal(items: any[]): Promise<void> {
+    await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(items));
+  }
+
+  // ==================== AUTH ====================
 
   async signup(fullName: string, email: string, password: string): Promise<ApiResponse> {
     try {
@@ -126,6 +139,8 @@ class ApiService {
     }
   }
 
+  // ==================== HISTORY (LOCAL) ====================
+
   async addHistory(item: {
     foodName: string;
     calories: number;
@@ -138,13 +153,19 @@ class ApiService {
     image?: string;
   }): Promise<ApiResponse> {
     try {
-      const uid = this.getUserId();
-      if (!uid) return { error: 'Not authenticated' };
-
-      await addDoc(collection(db, 'users', uid, 'history'), {
+      const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      const entry = {
+        id,
         ...item,
-        createdAt: serverTimestamp(),
-      });
+        carbs: item.carbs || 0,
+        fiber: item.fiber || 0,
+        sugar: item.sugar || 0,
+        createdAt: new Date().toISOString(),
+      };
+
+      const items = await this.getHistoryLocal();
+      items.unshift(entry);
+      await this.saveHistoryLocal(items);
 
       return { success: true };
     } catch (error: any) {
@@ -154,34 +175,23 @@ class ApiService {
 
   async getHistory(filter: string = 'all'): Promise<ApiResponse> {
     try {
-      const uid = this.getUserId();
-      if (!uid) return { error: 'Not authenticated' };
+      let items = await this.getHistoryLocal();
 
-      const historyRef = collection(db, 'users', uid, 'history');
-      let q = query(historyRef, orderBy('createdAt', 'desc'));
-
+      const now = new Date();
       if (filter === 'today') {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        q = query(historyRef, where('createdAt', '>=', Timestamp.fromDate(today)), orderBy('createdAt', 'desc'));
+        const today = now.toISOString().split('T')[0];
+        items = items.filter((h) => h.createdAt.split('T')[0] === today);
       } else if (filter === 'week') {
-        const weekAgo = new Date();
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        q = query(historyRef, where('createdAt', '>=', Timestamp.fromDate(weekAgo)), orderBy('createdAt', 'desc'));
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        items = items.filter((h) => new Date(h.createdAt) >= weekAgo);
       } else if (filter === 'month') {
-        const monthAgo = new Date();
-        monthAgo.setMonth(monthAgo.getMonth() - 1);
-        q = query(historyRef, where('createdAt', '>=', Timestamp.fromDate(monthAgo)), orderBy('createdAt', 'desc'));
+        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        items = items.filter((h) => new Date(h.createdAt) >= monthAgo);
       }
 
-      const snapshot = await getDocs(q);
-      const history = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
-      }));
+      items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-      return { success: true, history };
+      return { success: true, history: items };
     } catch (error: any) {
       return { error: 'Failed to load history' };
     }
@@ -189,10 +199,9 @@ class ApiService {
 
   async deleteHistory(id: string): Promise<ApiResponse> {
     try {
-      const uid = this.getUserId();
-      if (!uid) return { error: 'Not authenticated' };
-
-      await deleteDoc(doc(db, 'users', uid, 'history', id));
+      const items = await this.getHistoryLocal();
+      const filtered = items.filter((h) => h.id !== id);
+      await this.saveHistoryLocal(filtered);
       return { success: true };
     } catch (error: any) {
       return { error: 'Failed to delete history' };
@@ -201,35 +210,42 @@ class ApiService {
 
   async clearHistory(): Promise<ApiResponse> {
     try {
-      const uid = this.getUserId();
-      if (!uid) return { error: 'Not authenticated' };
-
-      const snapshot = await getDocs(collection(db, 'users', uid, 'history'));
-      for (const docSnap of snapshot.docs) {
-        await deleteDoc(docSnap.ref);
-      }
+      await AsyncStorage.removeItem(HISTORY_KEY);
       return { success: true };
     } catch (error: any) {
       return { error: 'Failed to clear history' };
     }
   }
 
+  // ==================== STATS (COMPUTED FROM LOCAL) ====================
+
   async getStats(): Promise<ApiResponse> {
     try {
-      const uid = this.getUserId();
-      if (!uid) return { error: 'Not authenticated' };
-
-      const snapshot = await getDocs(collection(db, 'users', uid, 'history'));
-      const items = snapshot.docs.map((doc) => doc.data());
+      const items = await this.getHistoryLocal();
 
       const totalCalories = items.reduce((sum, item) => sum + (item.calories || 0), 0);
       const totalProtein = items.reduce((sum, item) => sum + (item.protein || 0), 0);
       const totalFat = items.reduce((sum, item) => sum + (item.fat || 0), 0);
+      const totalCarbs = items.reduce((sum, item) => sum + (item.carbs || 0), 0);
+      const totalFiber = items.reduce((sum, item) => sum + (item.fiber || 0), 0);
+      const totalSugar = items.reduce((sum, item) => sum + (item.sugar || 0), 0);
       const totalScans = items.length;
+
+      const today = new Date().toISOString().split('T')[0];
+      const todayScans = items.filter((h) => h.createdAt.split('T')[0] === today).length;
 
       return {
         success: true,
-        stats: { totalCalories, totalProtein, totalFat, totalScans },
+        stats: {
+          totalScans,
+          totalCalories: Math.round(totalCalories),
+          totalProtein: Math.round(totalProtein * 10) / 10,
+          totalFat: Math.round(totalFat * 10) / 10,
+          totalCarbs: Math.round(totalCarbs * 10) / 10,
+          totalFiber: Math.round(totalFiber * 10) / 10,
+          totalSugar: Math.round(totalSugar * 10) / 10,
+          todayScans,
+        },
       };
     } catch (error: any) {
       return { error: 'Failed to load stats' };
@@ -238,37 +254,72 @@ class ApiService {
 
   async getTodayLog(): Promise<ApiResponse> {
     try {
-      const uid = this.getUserId();
-      if (!uid) return { log: { totalCalories: 0, totalProtein: 0, totalFat: 0, totalCarbs: 0 } };
-
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      const q = query(
-        collection(db, 'users', uid, 'history'),
-        where('createdAt', '>=', Timestamp.fromDate(today))
-      );
-
-      const snapshot = await getDocs(q);
-      const items = snapshot.docs.map((doc) => doc.data());
+      const items = await this.getHistoryLocal();
+      const today = new Date().toISOString().split('T')[0];
+      const todayItems = items.filter((h) => h.createdAt.split('T')[0] === today);
 
       const log = {
-        totalCalories: items.reduce((sum, item) => sum + (item.calories || 0), 0),
-        totalProtein: items.reduce((sum, item) => sum + (item.protein || 0), 0),
-        totalFat: items.reduce((sum, item) => sum + (item.fat || 0), 0),
-        totalCarbs: items.reduce((sum, item) => sum + (item.carbs || 0), 0),
+        totalCalories: todayItems.reduce((sum, item) => sum + (item.calories || 0), 0),
+        totalProtein: todayItems.reduce((sum, item) => sum + (item.protein || 0), 0),
+        totalFat: todayItems.reduce((sum, item) => sum + (item.fat || 0), 0),
+        totalCarbs: todayItems.reduce((sum, item) => sum + (item.carbs || 0), 0),
+        totalFiber: todayItems.reduce((sum, item) => sum + (item.fiber || 0), 0),
+        totalSugar: todayItems.reduce((sum, item) => sum + (item.sugar || 0), 0),
+        mealCount: todayItems.length,
       };
 
       return { success: true, log };
     } catch (error: any) {
-      return { log: { totalCalories: 0, totalProtein: 0, totalFat: 0, totalCarbs: 0 } };
+      return { log: { totalCalories: 0, totalProtein: 0, totalFat: 0, totalCarbs: 0, mealCount: 0 } };
     }
   }
+
+  async getDailyLogs(days: number = 7): Promise<ApiResponse> {
+    try {
+      const items = await this.getHistoryLocal();
+      const now = new Date();
+      const logs: any[] = [];
+
+      for (let i = days - 1; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+        const dayItems = items.filter((h) => h.createdAt.split('T')[0] === dateStr);
+
+        logs.push({
+          date: dateStr,
+          totalCalories: dayItems.reduce((sum, item) => sum + (item.calories || 0), 0),
+          totalProtein: dayItems.reduce((sum, item) => sum + (item.protein || 0), 0),
+          totalFat: dayItems.reduce((sum, item) => sum + (item.fat || 0), 0),
+          totalCarbs: dayItems.reduce((sum, item) => sum + (item.carbs || 0), 0),
+          totalFiber: dayItems.reduce((sum, item) => sum + (item.fiber || 0), 0),
+          totalSugar: dayItems.reduce((sum, item) => sum + (item.sugar || 0), 0),
+          mealCount: dayItems.length,
+        });
+      }
+
+      return { success: true, logs };
+    } catch (error: any) {
+      return { error: 'Failed to load daily logs' };
+    }
+  }
+
+  // ==================== SUBSCRIPTION ====================
 
   async checkSubscription(): Promise<ApiResponse> {
     try {
       const uid = this.getUserId();
-      if (!uid) return { hasActiveSubscription: false };
+      if (!uid) {
+        const localSub = await AsyncStorage.getItem('hasActiveSubscription');
+        const adminFlag = await AsyncStorage.getItem('isAdmin');
+        if (adminFlag === 'true') {
+          return { hasActiveSubscription: true, subscription: { plan: 'admin', daysRemaining: 36500 } };
+        }
+        if (localSub === 'true') {
+          return { hasActiveSubscription: true };
+        }
+        return { hasActiveSubscription: false };
+      }
 
       const userDoc = await getDoc(doc(db, 'users', uid));
       const userData = userDoc.data();
@@ -358,6 +409,8 @@ class ApiService {
     return this.activateSubscription(planId);
   }
 
+  // ==================== GOALS ====================
+
   async getGoals(): Promise<ApiResponse> {
     try {
       const uid = this.getUserId();
@@ -373,10 +426,18 @@ class ApiService {
     }
   }
 
+  // ==================== GENERIC REQUEST ====================
+
   async request(endpoint: string, options: { method?: string; body?: any } = {}): Promise<ApiResponse> {
     if (endpoint === '/api/goals') return this.getGoals();
     if (endpoint === '/api/daily-logs/today') return this.getTodayLog();
     if (endpoint === '/api/stats') return this.getStats();
+
+    const dailyLogsMatch = endpoint.match(/^\/api\/daily-logs\?days=(\d+)$/);
+    if (dailyLogsMatch) {
+      return this.getDailyLogs(parseInt(dailyLogsMatch[1], 10));
+    }
+
     return { error: 'Unknown endpoint' };
   }
 }
