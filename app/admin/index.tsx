@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert,
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE } from '../../src/services/config';
+const API_BASE = 'https://scalai-server.onrender.com';
 
 interface AdminStats {
   totalUsers: number;
