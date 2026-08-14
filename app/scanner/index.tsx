@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useRef, useState } from 'react';
-import { Keyboard, ScrollView, Animated, TextInput, Dimensions } from 'react-native';
+import { Keyboard, ScrollView, Animated, TextInput } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { scheduleLocalNotification } from '../../src/services/notifications';
 import {
@@ -20,8 +20,6 @@ import { api } from '../../src/services/api';
 import { searchFood, getRandomFood } from '../../src/data/foodDatabase';
 import KidneyDiagram from '../../src/components/KidneyDiagram';
 import ScanResult3D from '../../src/components/ScanResult3D';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function ScannerScreen() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -188,13 +186,7 @@ export default function ScannerScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
-        ref={scrollRef}
-        style={styles.scrollContainer}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={styles.fixedTop}>
         <View style={styles.header}>
           <Text style={styles.title}>🍽️ SCAL AI</Text>
           <View style={styles.headerButtons}>
@@ -255,7 +247,15 @@ export default function ScannerScreen() {
             </CameraView>
           )}
         </View>
+      </View>
 
+      <ScrollView
+        ref={scrollRef}
+        style={styles.scrollArea}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         {scanning && (
           <View style={styles.scanningContainer}>
             <ActivityIndicator size="large" color={Colors.gold} />
@@ -300,12 +300,7 @@ const styles = StyleSheet.create({
     fontSize: FontSize.medium,
     marginTop: Spacing.md,
   },
-  scrollContainer: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
+  fixedTop: {},
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -386,7 +381,7 @@ const styles = StyleSheet.create({
   goalBarFill: { height: '100%', borderRadius: 2 },
   goalValue: { color: Colors.grayLight, fontSize: 8, marginTop: 2 },
   cameraContainer: {
-    height: 240,
+    height: 200,
     marginHorizontal: Spacing.md,
     borderRadius: 20,
     overflow: 'hidden',
@@ -400,8 +395,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scanFrame: {
-    width: 180,
-    height: 180,
+    width: 160,
+    height: 160,
     borderWidth: 3,
     borderColor: Colors.gold,
     borderRadius: 20,
@@ -418,6 +413,13 @@ const styles = StyleSheet.create({
   capturedImage: {
     flex: 1,
     resizeMode: 'contain',
+  },
+  scrollArea: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingTop: Spacing.sm,
+    paddingBottom: 40,
   },
   scanningContainer: {
     alignItems: 'center',
