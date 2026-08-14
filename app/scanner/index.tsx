@@ -34,6 +34,7 @@ export default function ScannerScreen() {
   const [goals, setGoals] = useState({ calories: 2000, protein: 50, fat: 65, carbs: 300 });
   const cameraRef = useRef<any>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     Keyboard.dismiss();
@@ -48,6 +49,14 @@ export default function ScannerScreen() {
       ])
     ).start();
   }, [permission]);
+
+  useEffect(() => {
+    if (result && scrollRef.current) {
+      setTimeout(() => {
+        scrollRef.current?.scrollToEnd({ animated: true });
+      }, 300);
+    }
+  }, [result]);
 
   const checkSubscription = async () => {
     try {
@@ -118,6 +127,7 @@ export default function ScannerScreen() {
   const simulateScan = () => {
     setScanning(true);
     setResult(null);
+    setCapturedImage(null);
     setTimeout(() => {
       const food = getRandomFood();
       setResult(food);
@@ -149,7 +159,10 @@ export default function ScannerScreen() {
     if (!pickResult.canceled) { setCapturedImage(pickResult.assets[0].uri); simulateScan(); }
   };
 
-  const retake = () => { setCapturedImage(null); setResult(null); };
+  const retake = () => {
+    setCapturedImage(null);
+    setResult(null);
+  };
 
   const getProgress = (current: number, target: number) => Math.min(current / target, 1);
   const getProgressColor = (p: number) => { if (p < 0.5) return '#4CAF50'; if (p < 0.8) return Colors.gold; return '#f44336'; };
@@ -173,88 +186,98 @@ export default function ScannerScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>🍽️ SCAL AI</Text>
-        <View style={styles.headerButtons}>
-          <TouchableOpacity onPress={() => router.push('/charts')} style={styles.headerBtn}><Text style={styles.headerBtnText}>📈</Text></TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/reminders')} style={styles.headerBtn}><Text style={styles.headerBtnText}>🔔</Text></TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/subscription')} style={styles.headerBtn}><Text style={styles.headerBtnText}>⭐</Text></TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/history')} style={styles.headerBtn}><Text style={styles.headerBtnText}>📊</Text></TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/profile')} style={styles.headerBtn}><Text style={styles.headerBtnText}>👤</Text></TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/about')} style={styles.headerBtn}><Text style={styles.headerBtnText}>ℹ️</Text></TouchableOpacity>
+      <ScrollView
+        ref={scrollRef}
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          <Text style={styles.title}>🍽️ SCAL AI</Text>
+          <View style={styles.headerButtons}>
+            <TouchableOpacity onPress={() => router.push('/charts')} style={styles.headerBtn}><Text style={styles.headerBtnText}>📈</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/reminders')} style={styles.headerBtn}><Text style={styles.headerBtnText}>🔔</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/subscription')} style={styles.headerBtn}><Text style={styles.headerBtnText}>⭐</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/history')} style={styles.headerBtn}><Text style={styles.headerBtnText}>📊</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/profile')} style={styles.headerBtn}><Text style={styles.headerBtnText}>👤</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/about')} style={styles.headerBtn}><Text style={styles.headerBtnText}>ℹ️</Text></TouchableOpacity>
+          </View>
         </View>
-      </View>
 
-      <View style={styles.searchContainer}>
-        <TextInput style={styles.searchInput} placeholder="🔍 Search food manually..." placeholderTextColor="#666" value={searchQuery} onChangeText={handleSearch} onFocus={() => searchResults.length > 0 && setShowSuggestions(true)} />
-        {showSuggestions && searchResults.length > 0 && (
-          <View style={styles.suggestionsDropdown}>
-            <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled>
-              {searchResults.map((food, i) => (
-                <TouchableOpacity key={i} style={styles.suggestionItem} onPress={() => selectSearchResult(food)}>
-                  <Text style={styles.suggestionName}>{food.name.charAt(0).toUpperCase() + food.name.slice(1)}</Text>
-                  <Text style={styles.suggestionCal}>{food.calories} cal</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+        <View style={styles.searchContainer}>
+          <TextInput style={styles.searchInput} placeholder="🔍 Search food manually..." placeholderTextColor="#666" value={searchQuery} onChangeText={handleSearch} onFocus={() => searchResults.length > 0 && setShowSuggestions(true)} />
+          {showSuggestions && searchResults.length > 0 && (
+            <View style={styles.suggestionsDropdown}>
+              <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled>
+                {searchResults.map((food, i) => (
+                  <TouchableOpacity key={i} style={styles.suggestionItem} onPress={() => selectSearchResult(food)}>
+                    <Text style={styles.suggestionName}>{food.name.charAt(0).toUpperCase() + food.name.slice(1)}</Text>
+                    <Text style={styles.suggestionCal}>{food.calories} cal</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.goalsBar}>
+          {[
+            { label: 'Cal', current: todayLog.totalCalories, target: goals.calories, unit: '' },
+            { label: 'Prot', current: todayLog.totalProtein, target: goals.protein, unit: 'g' },
+            { label: 'Fat', current: todayLog.totalFat, target: goals.fat, unit: 'g' },
+            { label: 'Carbs', current: todayLog.totalCarbs, target: goals.carbs, unit: 'g' },
+          ].map((item) => {
+            const progress = getProgress(item.current, item.target);
+            return (
+              <View key={item.label} style={styles.goalItem}>
+                <Text style={styles.goalLabel}>{item.label}</Text>
+                <View style={styles.goalBarBg}>
+                  <View style={[styles.goalBarFill, { width: `${progress * 100}%`, backgroundColor: getProgressColor(progress) }]} />
+                </View>
+                <Text style={styles.goalValue}>{Math.round(item.current)}{item.unit}/{item.target}{item.unit}</Text>
+              </View>
+            );
+          })}
+        </View>
+
+        <View style={styles.cameraContainer}>
+          {capturedImage ? (
+            <Image source={{ uri: capturedImage }} style={styles.capturedImage} />
+          ) : (
+            <CameraView ref={cameraRef} style={styles.camera} facing="back">
+              <View style={styles.scanOverlay}>
+                <Animated.View style={[styles.scanFrame, { transform: [{ scale: pulseAnim }] }]} />
+                <Text style={styles.scanText}>Point at food to scan</Text>
+              </View>
+            </CameraView>
+          )}
+        </View>
+
+        {scanning && (
+          <View style={styles.scanningContainer}>
+            <ActivityIndicator size="large" color={Colors.gold} />
+            <Text style={styles.scanningText}>Analyzing food...</Text>
           </View>
         )}
-      </View>
 
-      <View style={styles.goalsBar}>
-        {[
-          { label: 'Cal', current: todayLog.totalCalories, target: goals.calories, unit: '' },
-          { label: 'Prot', current: todayLog.totalProtein, target: goals.protein, unit: 'g' },
-          { label: 'Fat', current: todayLog.totalFat, target: goals.fat, unit: 'g' },
-          { label: 'Carbs', current: todayLog.totalCarbs, target: goals.carbs, unit: 'g' },
-        ].map((item) => {
-          const progress = getProgress(item.current, item.target);
-          return (
-            <View key={item.label} style={styles.goalItem}>
-              <Text style={styles.goalLabel}>{item.label}</Text>
-              <View style={styles.goalBarBg}>
-                <View style={[styles.goalBarFill, { width: `${progress * 100}%`, backgroundColor: getProgressColor(progress) }]} />
-              </View>
-              <Text style={styles.goalValue}>{Math.round(item.current)}{item.unit}/{item.target}{item.unit}</Text>
-            </View>
-          );
-        })}
-      </View>
-
-      <TouchableOpacity activeOpacity={1} style={styles.cameraContainer} onPress={() => Keyboard.dismiss()}>
-        {capturedImage ? (
-          <Image source={{ uri: capturedImage }} style={styles.capturedImage} />
-        ) : (
-          <CameraView ref={cameraRef} style={styles.camera} facing="back">
-            <View style={styles.scanOverlay}>
-              <Animated.View style={[styles.scanFrame, { transform: [{ scale: pulseAnim }] }]} />
-              <Text style={styles.scanText}>Point at food to scan</Text>
-            </View>
-          </CameraView>
+        {!result && !scanning && (
+          <View style={styles.controls}>
+            <TouchableOpacity style={styles.captureButton} onPress={takePicture}><View style={styles.captureButtonInner} /></TouchableOpacity>
+            <TouchableOpacity style={styles.uploadButton} onPress={pickImage}><Text style={styles.uploadText}>📁 Upload Image</Text></TouchableOpacity>
+          </View>
         )}
-      </TouchableOpacity>
 
-      {result ? (
-        <ScrollView style={styles.resultContainer} contentContainerStyle={styles.resultContent}>
-          <ScanResult3D food={result} />
-          <KidneyDiagram impact={result.kidneyImpact} tip={result.kidneyTip} />
-          <TouchableOpacity style={styles.retakeButton} onPress={retake}><Text style={styles.retakeText}>Scan Again</Text></TouchableOpacity>
-        </ScrollView>
-      ) : (
-        <TouchableOpacity style={styles.controls} activeOpacity={1} onPress={() => Keyboard.dismiss()}>
-          {scanning ? (
-            <View style={styles.scanningContainer}>
-              <ActivityIndicator size="large" color={Colors.gold} />
-              <Text style={styles.scanningText}>Analyzing food...</Text>
-            </View>
-          ) : (
-            <>
-              <TouchableOpacity style={styles.captureButton} onPress={takePicture}><View style={styles.captureButtonInner} /></TouchableOpacity>
-              <TouchableOpacity style={styles.uploadButton} onPress={pickImage}><Text style={styles.uploadText}>📁 Upload Image</Text></TouchableOpacity>
-            </>
-          )}
-        </TouchableOpacity>
-      )}
+        {result && (
+          <View style={styles.resultContainer}>
+            <ScanResult3D food={result} />
+            <KidneyDiagram impact={result.kidneyImpact} tip={result.kidneyTip} />
+            <TouchableOpacity style={styles.retakeButton} onPress={retake}>
+              <Text style={styles.retakeText}>Scan Again</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -274,6 +297,12 @@ const styles = StyleSheet.create({
     color: Colors.grayLight,
     fontSize: FontSize.medium,
     marginTop: Spacing.md,
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: Spacing.xxl * 2,
   },
   header: {
     flexDirection: 'row',
@@ -355,8 +384,8 @@ const styles = StyleSheet.create({
   goalBarFill: { height: '100%', borderRadius: 2 },
   goalValue: { color: Colors.grayLight, fontSize: 8, marginTop: 2 },
   cameraContainer: {
-    flex: 1,
-    margin: Spacing.md,
+    height: 350,
+    marginHorizontal: Spacing.md,
     borderRadius: 20,
     overflow: 'hidden',
   },
@@ -369,8 +398,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scanFrame: {
-    width: 280,
-    height: 280,
+    width: 240,
+    height: 240,
     borderWidth: 3,
     borderColor: Colors.gold,
     borderRadius: 20,
@@ -387,6 +416,15 @@ const styles = StyleSheet.create({
   capturedImage: {
     flex: 1,
     resizeMode: 'contain',
+  },
+  scanningContainer: {
+    alignItems: 'center',
+    paddingVertical: Spacing.lg,
+    gap: Spacing.md,
+  },
+  scanningText: {
+    color: Colors.gold,
+    fontSize: FontSize.medium,
   },
   controls: {
     padding: Spacing.xl,
@@ -407,14 +445,6 @@ const styles = StyleSheet.create({
     borderRadius: 35,
     backgroundColor: Colors.white,
   },
-  scanningContainer: {
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  scanningText: {
-    color: Colors.gold,
-    fontSize: FontSize.medium,
-  },
   uploadButton: {
     padding: Spacing.md,
   },
@@ -423,10 +453,7 @@ const styles = StyleSheet.create({
     fontSize: FontSize.medium,
   },
   resultContainer: {
-    flex: 1,
-  },
-  resultContent: {
-    padding: Spacing.xl,
+    paddingHorizontal: Spacing.xl,
     paddingBottom: Spacing.xxl,
   },
   retakeButton: {
