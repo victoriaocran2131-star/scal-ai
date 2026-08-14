@@ -129,7 +129,7 @@ export default function ScannerScreen() {
   };
 
   const autoSaveToHistory = async (food: any) => {
-    await api.addHistory({ foodName: food.name, calories: food.calories, protein: food.protein, fat: food.fat, carbs: food.carbs, fiber: food.fiber, sugar: food.sugar, digestion: food.digestion });
+    await api.addHistory({ calories: food.calories, protein: food.protein, fat: food.fat, carbs: food.carbs, fiber: food.fiber, sugar: food.sugar, digestion: food.digestion });
   };
 
   const takePicture = async () => {

@@ -142,7 +142,6 @@ class ApiService {
   // ==================== HISTORY (LOCAL) ====================
 
   async addHistory(item: {
-    foodName: string;
     calories: number;
     protein: number;
     fat: number;
@@ -150,16 +149,18 @@ class ApiService {
     fiber?: number;
     sugar?: number;
     digestion: string;
-    image?: string;
   }): Promise<ApiResponse> {
     try {
       const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
       const entry = {
         id,
-        ...item,
+        calories: item.calories,
+        protein: item.protein,
+        fat: item.fat,
         carbs: item.carbs || 0,
         fiber: item.fiber || 0,
         sugar: item.sugar || 0,
+        digestion: item.digestion,
         createdAt: new Date().toISOString(),
       };
 

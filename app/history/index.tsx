@@ -14,7 +14,6 @@ import { api } from '../../src/services/api';
 
 interface HistoryItem {
   id: string;
-  foodName: string;
   calories: number;
   protein: number;
   fat: number;
@@ -54,7 +53,6 @@ export default function HistoryScreen() {
   const renderItem = ({ item }: { item: HistoryItem }) => (
     <View style={styles.historyItem}>
       <View style={styles.itemHeader}>
-        <Text style={styles.itemFoodName}>{item.foodName}</Text>
         <Text style={styles.itemDate}>{formatDate(item.createdAt)}</Text>
       </View>
       <View style={styles.itemStats}>
@@ -184,12 +182,6 @@ const styles = StyleSheet.create({
   },
   itemHeader: {
     marginBottom: Spacing.sm,
-  },
-  itemFoodName: {
-    color: Colors.white,
-    fontSize: FontSize.medium,
-    fontWeight: 'bold',
-    marginBottom: 2,
   },
   itemDate: {
     color: Colors.gray,
