@@ -87,7 +87,6 @@ export default function ScanResult3D({ food }: Props) {
 
         <View style={styles.header}>
           <View style={styles.foodNameContainer}>
-            <Text style={styles.foodName}>{food.name}</Text>
             <View style={[styles.impactBadge, { backgroundColor: impactColor.bg }]}>
               <Text style={[styles.impactText, { color: impactColor.primary }]}>
                 {getImpactEmoji()} {getImpactLabel()}

@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useRef, useState } from 'react';
-import { Keyboard, ScrollView, Animated, TextInput } from 'react-native';
+import { Keyboard, Animated } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { scheduleLocalNotification } from '../../services/notifications';
 import {
@@ -17,7 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, FontSize, Spacing } from '../../constants/theme';
 import { api } from '../../services/api';
-import { searchFood, getRandomFood } from '../../data/foodDatabase';
+import { getRandomFood } from '../../data/foodDatabase';
 import KidneyDiagram from '../../components/KidneyDiagram';
 import ScanResult3D from '../../components/ScanResult3D';
 
@@ -27,9 +27,6 @@ export default function ScannerScreen() {
   const [result, setResult] = useState<any>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [hasSubscription, setHasSubscription] = useState<boolean | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
   const [todayLog, setTodayLog] = useState({ totalCalories: 0, totalProtein: 0, totalFat: 0, totalCarbs: 0 });
   const [goals, setGoals] = useState({ calories: 2000, protein: 50, fat: 65, carbs: 300 });
   const cameraRef = useRef<any>(null);
@@ -69,9 +66,6 @@ export default function ScannerScreen() {
       } else {
         setHasSubscription(false);
         await AsyncStorage.removeItem('hasActiveSubscription');
-        Alert.alert('Subscription Required', 'You need an active subscription to scan food.', [
-          { text: 'Subscribe', onPress: () => router.push('/subscription') },
-        ]);
       }
     } catch (error) {
       const localSub = await AsyncStorage.getItem('hasActiveSubscription');
@@ -79,7 +73,6 @@ export default function ScannerScreen() {
         setHasSubscription(true);
       } else {
         setHasSubscription(false);
-        router.push('/subscription');
       }
     }
   };
@@ -98,23 +91,6 @@ export default function ScannerScreen() {
     } catch (error) {}
   };
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    if (query.length < 1) { setSearchResults([]); setShowSuggestions(false); return; }
-    const results = searchFood(query);
-    setSearchResults(results);
-    setShowSuggestions(results.length > 0);
-  };
-
-  const selectSearchResult = (food: any) => {
-    setResult(food);
-    setSearchQuery('');
-    setSearchResults([]);
-    setShowSuggestions(false);
-    autoSaveToHistory(food);
-    loadTodayLog();
-  };
-
   const simulateScan = () => {
     setScanning(true);
     setResult(null);
@@ -124,7 +100,7 @@ export default function ScannerScreen() {
       setScanning(false);
       autoSaveToHistory(food);
       loadTodayLog();
-      scheduleLocalNotification('Scan Complete!', `Found: ${food.name} - ${food.calories} kcal`, { foodName: food.name, calories: food.calories });
+      scheduleLocalNotification('Scan Complete!', `${food.calories} kcal detected`, { foodName: food.name, calories: food.calories });
     }, 2000);
   };
 
@@ -154,8 +130,29 @@ export default function ScannerScreen() {
   const getProgress = (current: number, target: number) => Math.min(current / target, 1);
   const getProgressColor = (p: number) => { if (p < 0.5) return '#4CAF50'; if (p < 0.8) return Colors.gold; return '#f44336'; };
 
+  // SUBSCRIPTION WALL - no subscription = locked screen
+  if (hasSubscription === false) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.wallContainer}>
+          <Text style={styles.wallIcon}>🔒</Text>
+          <Text style={styles.wallTitle}>Subscription Required</Text>
+          <Text style={styles.wallText}>
+            You need an active subscription to use Scal AI. Subscribe now to access food scanning, nutrition tracking, and more.
+          </Text>
+          <TouchableOpacity style={styles.wallButton} onPress={() => router.push('/subscription')}>
+            <Text style={styles.wallButtonText}>View Plans</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.wallSignIn} onPress={() => router.push('/signin')}>
+            <Text style={styles.wallSignInText}>Sign In to Your Account</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   if (!permission) {
-    return (<View style={styles.centered}><ActivityIndicator size="large" color={Colors.gold} /><Text style={styles.loadingText}>Checking subscription...</Text></View>);
+    return (<View style={styles.centered}><ActivityIndicator size="large" color={Colors.gold} /><Text style={styles.loadingText}>Loading...</Text></View>);
   }
 
   if (!permission.granted) {
@@ -183,22 +180,6 @@ export default function ScannerScreen() {
           <TouchableOpacity onPress={() => router.push('/profile')} style={styles.headerBtn}><Text style={styles.headerBtnText}>👤</Text></TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/about')} style={styles.headerBtn}><Text style={styles.headerBtnText}>ℹ️</Text></TouchableOpacity>
         </View>
-      </View>
-
-      <View style={styles.searchContainer}>
-        <TextInput style={styles.searchInput} placeholder="🔍 Search food manually..." placeholderTextColor="#666" value={searchQuery} onChangeText={handleSearch} onFocus={() => searchResults.length > 0 && setShowSuggestions(true)} />
-        {showSuggestions && searchResults.length > 0 && (
-          <View style={styles.suggestionsDropdown}>
-            <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled>
-              {searchResults.map((food, i) => (
-                <TouchableOpacity key={i} style={styles.suggestionItem} onPress={() => selectSearchResult(food)}>
-                  <Text style={styles.suggestionName}>{food.name.charAt(0).toUpperCase() + food.name.slice(1)}</Text>
-                  <Text style={styles.suggestionCal}>{food.calories} cal</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
       </View>
 
       <View style={styles.goalsBar}>
@@ -235,11 +216,11 @@ export default function ScannerScreen() {
       </TouchableOpacity>
 
       {result ? (
-        <ScrollView style={styles.resultContainer} contentContainerStyle={styles.resultContent}>
+        <View style={styles.resultContainer}>
           <ScanResult3D food={result} />
           <KidneyDiagram impact={result.kidneyImpact} tip={result.kidneyTip} />
           <TouchableOpacity style={styles.retakeButton} onPress={retake}><Text style={styles.retakeText}>Scan Again</Text></TouchableOpacity>
-        </ScrollView>
+        </View>
       ) : (
         <TouchableOpacity style={styles.controls} activeOpacity={1} onPress={() => Keyboard.dismiss()}>
           {scanning ? (
@@ -297,45 +278,6 @@ const styles = StyleSheet.create({
   headerBtnText: {
     fontSize: 20,
   },
-  searchContainer: {
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.sm,
-    zIndex: 10,
-    position: 'relative',
-  },
-  searchInput: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 12,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    color: Colors.white,
-    fontSize: FontSize.medium,
-    borderWidth: 1,
-    borderColor: 'rgba(212,175,55,0.3)',
-  },
-  suggestionsDropdown: {
-    position: 'absolute',
-    top: 44,
-    left: Spacing.lg,
-    right: Spacing.lg,
-    backgroundColor: '#222',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(212,175,55,0.3)',
-    zIndex: 100,
-    overflow: 'hidden',
-  },
-  suggestionItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
-  },
-  suggestionName: { color: Colors.white, fontSize: FontSize.medium },
-  suggestionCal: { color: Colors.gold, fontSize: FontSize.small },
   goalsBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -423,11 +365,7 @@ const styles = StyleSheet.create({
     fontSize: FontSize.medium,
   },
   resultContainer: {
-    flex: 1,
-  },
-  resultContent: {
-    padding: Spacing.xl,
-    paddingBottom: Spacing.xxl,
+    maxHeight: '50%',
   },
   retakeButton: {
     backgroundColor: Colors.gold,
@@ -435,6 +373,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     marginTop: Spacing.md,
+    marginHorizontal: Spacing.xl,
   },
   retakeText: {
     color: Colors.black,
@@ -468,5 +407,48 @@ const styles = StyleSheet.create({
     color: Colors.black,
     fontSize: FontSize.large,
     fontWeight: 'bold',
+  },
+  wallContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
+  },
+  wallIcon: {
+    fontSize: 80,
+    marginBottom: Spacing.xl,
+  },
+  wallTitle: {
+    fontSize: FontSize.xxlarge,
+    color: Colors.white,
+    fontWeight: 'bold',
+    marginBottom: Spacing.md,
+    textAlign: 'center',
+  },
+  wallText: {
+    fontSize: FontSize.medium,
+    color: Colors.grayLight,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: Spacing.xxl,
+  },
+  wallButton: {
+    backgroundColor: Colors.gold,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.xl * 2,
+    borderRadius: 12,
+    marginBottom: Spacing.lg,
+  },
+  wallButtonText: {
+    color: Colors.black,
+    fontSize: FontSize.large,
+    fontWeight: 'bold',
+  },
+  wallSignIn: {
+    padding: Spacing.md,
+  },
+  wallSignInText: {
+    color: Colors.gold,
+    fontSize: FontSize.medium,
   },
 });
