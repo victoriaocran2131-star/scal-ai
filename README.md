@@ -1,75 +1,43 @@
-# Scal AI - Mobile App
+# FoodScan - Calorie & Nutrient Scanner
 
-## Deploy to App Store from PC (No Mac Needed)
-
-### Prerequisites
-- Windows PC (you already have this)
-- Apple Developer Account ($99/year)
-- GitHub account (free)
-- Expo account (free)
-- CodeMagic account (free tier)
-
-### Quick Start
-1. Read `APP_STORE_DEPLOYMENT.md` for full instructions
-2. The entire process takes about 1 hour
-
-### How It Works
-- **CodeMagic** builds your iOS app on THEIR Mac servers in the cloud
-- **EAS (Expo Application Services)** handles code signing automatically
-- You do everything from your PC browser
-
----
+A web-based food scanning app that uses your camera to identify food and calculate calories, nutrients, and digestion time.
 
 ## Features
-- Camera-based food scanning
-- Calorie, protein, and fat tracking
-- Digestion time information
-- Scan history with filters
-- Secure user authentication
-- Push notifications for scan results
-- Beautiful gold-themed design
 
----
+- **Camera Integration**: Use your device camera to scan food
+- **Food Recognition**: AI-powered food identification (simulated demo)
+- **Nutrition Data**: Calories, protein, carbs, fat, fiber, sugar
+- **Digestion Time**: How long food takes to digest in your body
+- **Portion Control**: Adjust portion sizes for accurate calculations
+- **Manual Search**: Search from 100+ foods if camera isn't available
+- **Daily Log**: Track all food eaten throughout the day
 
-## Tech Stack
-- React Native with Expo
-- TypeScript
-- Expo Router for navigation
-- AsyncStorage for local data
-- Expo Notifications for push notifications
-- Backend API integration
+## How to Use
 
----
+1. Open `index.html` in a modern browser
+2. Click "Start Camera" to enable your webcam
+3. Point at food and click "Scan Food"
+4. View nutrition info and digestion time
+5. Adjust portion size if needed
+6. Click "Add to Log" to save to your daily tracker
 
-## Environment Variables
-The app connects to: `https://scal-ai-production.up.railway.app`
+## Files
 
-Make sure your backend server is running and accessible.
+- `index.html` - Main app structure
+- `style.css` - Styling and animations
+- `foodDatabase.js` - 100+ foods with nutrition data
+- `app.js` - Main application logic
 
----
+## Browser Requirements
 
-## Push Notifications
-The app uses Expo Push Notifications to alert users when their food scan is complete.
+- Modern browser (Chrome, Firefox, Edge, Safari)
+- Camera permission for scanning feature
+- Works on desktop and mobile
 
-### How it works:
-1. User scans food
-2. App processes the scan
-3. Local notification is sent with the result
+## Note
 
-### For server-side notifications:
-1. Get the push token from the user's device
-2. Send to your backend
-3. Use Expo Push API to send notifications
-
----
-
-## Customization
-- Edit `src/constants/theme.ts` for colors
-- Edit `src/data/foodDatabase.ts` for food items
-- Edit `src/services/api.ts` for API endpoints
-- Edit `src/services/notifications.ts` for notification settings
-
----
-
-## Support
-For issues, contact: support@scalai.app
+This is a demo version. For production use, integrate with a food recognition API like:
+- Google Vision AI
+- Clarifai Food Model
+- Nutritionix API
+- Edamam API

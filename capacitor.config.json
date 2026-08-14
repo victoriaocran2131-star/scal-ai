@@ -1,0 +1,23 @@
+{
+  "appId": "com.scalai.app",
+  "appName": "Scal AI",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": false,
+    "allowNavigation": ["*"]
+  },
+  "plugins": {
+    "Camera": {
+      "permissions": ["camera"]
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_notification",
+      "iconColor": "#c9a227"
+    }
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "preferredContentMode": "mobile"
+  }
+}
