@@ -186,7 +186,13 @@ export default function ScannerScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.fixedTop}>
+      <ScrollView
+        ref={scrollRef}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
           <Text style={styles.title}>🍽️ SCAL AI</Text>
           <View style={styles.headerButtons}>
@@ -239,7 +245,7 @@ export default function ScannerScreen() {
           {capturedImage ? (
             <Image source={{ uri: capturedImage }} style={styles.capturedImage} />
           ) : (
-            <CameraView ref={cameraRef} style={styles.camera} facing="back">
+            <CameraView ref={cameraRef} style={styles.camera} facing="back" pointerEvents="none">
               <View style={styles.scanOverlay}>
                 <Animated.View style={[styles.scanFrame, { transform: [{ scale: pulseAnim }] }]} />
                 <Text style={styles.scanText}>Point at food to scan</Text>
@@ -247,15 +253,7 @@ export default function ScannerScreen() {
             </CameraView>
           )}
         </View>
-      </View>
 
-      <ScrollView
-        ref={scrollRef}
-        style={styles.scrollArea}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
         {scanning && (
           <View style={styles.scanningContainer}>
             <ActivityIndicator size="large" color={Colors.gold} />
@@ -300,7 +298,12 @@ const styles = StyleSheet.create({
     fontSize: FontSize.medium,
     marginTop: Spacing.md,
   },
-  fixedTop: {},
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 60,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -414,13 +417,6 @@ const styles = StyleSheet.create({
     flex: 1,
     resizeMode: 'contain',
   },
-  scrollArea: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingTop: Spacing.sm,
-    paddingBottom: 40,
-  },
   scanningContainer: {
     alignItems: 'center',
     paddingVertical: Spacing.lg,
@@ -458,7 +454,6 @@ const styles = StyleSheet.create({
   },
   resultContainer: {
     paddingHorizontal: Spacing.xl,
-    paddingBottom: Spacing.xxl,
   },
   retakeButton: {
     backgroundColor: Colors.gold,
