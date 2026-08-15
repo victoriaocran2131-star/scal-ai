@@ -17,7 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, FontSize, Spacing } from '../../src/constants/theme';
 import { api } from '../../src/services/api';
-import { searchFood, getRandomFood } from '../../src/data/foodDatabase';
+import { searchFood, getRandomFood, getFoodByImageHash } from '../../src/data/foodDatabase';
 import KidneyDiagram from '../../src/components/KidneyDiagram';
 import ScanResult3D from '../../src/components/ScanResult3D';
 
@@ -124,12 +124,52 @@ export default function ScannerScreen() {
     loadTodayLog();
   };
 
-  const simulateScan = () => {
+  const IMAGE_CACHE_KEY = 'scalai_image_cache';
+
+  const getImageCache = async (): Promise<Record<string, any>> => {
+    try {
+      const raw = await AsyncStorage.getItem(IMAGE_CACHE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch { return {}; }
+  };
+
+  const saveImageCache = async (cache: Record<string, any>) => {
+    await AsyncStorage.setItem(IMAGE_CACHE_KEY, JSON.stringify(cache));
+  };
+
+  const simpleHash = (str: string): string => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return Math.abs(hash).toString(36);
+  };
+
+  const simulateScan = async (imageBase64?: string) => {
     setScanning(true);
     setResult(null);
     setCapturedImage(null);
+
+    let food: any;
+
+    if (imageBase64) {
+      const hash = simpleHash(imageBase64);
+      const cache = await getImageCache();
+
+      if (cache[hash]) {
+        food = cache[hash];
+      } else {
+        food = getFoodByImageHash(imageBase64);
+        cache[hash] = food;
+        await saveImageCache(cache);
+      }
+    } else {
+      food = getRandomFood();
+    }
+
     setTimeout(() => {
-      const food = getRandomFood();
       setResult(food);
       setScanning(false);
       autoSaveToHistory(food);
@@ -145,9 +185,9 @@ export default function ScannerScreen() {
   const takePicture = async () => {
     if (cameraRef.current) {
       try {
-        const photo = await cameraRef.current.takePictureAsync({ quality: 0.5, base64: false });
+        const photo = await cameraRef.current.takePictureAsync({ quality: 0.5, base64: true });
         setCapturedImage(photo.uri);
-        simulateScan();
+        simulateScan(photo.base64);
       } catch (error) {
         Alert.alert('Error', 'Failed to take picture');
       }
@@ -155,8 +195,11 @@ export default function ScannerScreen() {
   };
 
   const pickImage = async () => {
-    const pickResult = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.5 });
-    if (!pickResult.canceled) { setCapturedImage(pickResult.assets[0].uri); simulateScan(); }
+    const pickResult = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.5, base64: true });
+    if (!pickResult.canceled) {
+      setCapturedImage(pickResult.assets[0].uri);
+      simulateScan(pickResult.assets[0].base64 || undefined);
+    }
   };
 
   const retake = () => {

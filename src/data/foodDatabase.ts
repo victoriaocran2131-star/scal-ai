@@ -165,3 +165,16 @@ export function getRandomFood(): FoodItem {
   const foods = Object.values(foodDatabase);
   return foods[Math.floor(Math.random() * foods.length)];
 }
+
+export function getFoodByImageHash(base64Data: string): FoodItem {
+  const foods = Object.values(foodDatabase);
+  let hash = 0;
+  const sample = base64Data.length > 5000 ? base64Data.substring(0, 5000) : base64Data;
+  for (let i = 0; i < sample.length; i++) {
+    const char = sample.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  const index = Math.abs(hash) % foods.length;
+  return foods[index];
+}
