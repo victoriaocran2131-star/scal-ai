@@ -100,7 +100,7 @@ export default function KidneyDiagram({ impact, tip }: KidneyDiagramProps) {
           },
         ]}
       >
-        <LinearGradient colors={colors.gradient} style={styles.kidneyGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+        <LinearGradient colors={colors.gradient as any} style={styles.kidneyGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
 
           {/* 3D depth layers */}
           <View style={styles.kidneyDepth1} />
@@ -218,7 +218,6 @@ const styles = StyleSheet.create({
     width: 60,
     height: 15,
     borderRadius: 50,
-    blurRadius: 10,
     opacity: 0.5,
   },
   kidneyGlow: {
