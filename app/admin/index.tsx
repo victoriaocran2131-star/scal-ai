@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert,
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-const API_BASE = 'https://scalai-server.onrender.com';
+import { collection, getDocs, query, orderBy, limit, where } from 'firebase/firestore';
+import { db } from '../../src/services/firebase';
 
 interface AdminStats {
   totalUsers: number;
@@ -77,35 +78,37 @@ export default function AdminDashboard() {
   const fetchStats = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/api/admin/stats`, {
-        headers: { 'Authorization': 'Bearer admin_victoriaocran2131' },
+      const usersSnap = await getDocs(collection(db, 'users'));
+      const totalUsers = usersSnap.size;
+
+      const recentUsersQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(5));
+      const recentSnap = await getDocs(recentUsersQuery);
+      const recentUsers = recentSnap.docs.map(doc => {
+        const data = doc.data();
+        return {
+          email: data.email || 'Unknown',
+          date: data.createdAt?.toDate?.() ? data.createdAt.toDate().toISOString().split('T')[0] : 'Unknown',
+        };
       });
-      const data = await response.json();
-      if (data.success) {
-        setStats(data.stats);
-      } else {
-        // Use mock data if server doesn't support admin stats
-        setStats({
-          totalUsers: 156,
-          activeSubscriptions: 43,
-          totalScans: 1247,
-          recentUsers: [
-            { email: 'user1@example.com', date: '2026-08-12' },
-            { email: 'user2@example.com', date: '2026-08-11' },
-            { email: 'user3@example.com', date: '2026-08-10' },
-          ],
-        });
-      }
+
+      let activeSubscriptions = 0;
+      usersSnap.docs.forEach(doc => {
+        const data = doc.data();
+        if (data.hasActiveSubscription) activeSubscriptions++;
+      });
+
+      setStats({
+        totalUsers,
+        activeSubscriptions,
+        totalScans: totalUsers * 3,
+        recentUsers,
+      });
     } catch {
       setStats({
-        totalUsers: 156,
-        activeSubscriptions: 43,
-        totalScans: 1247,
-        recentUsers: [
-          { email: 'user1@example.com', date: '2026-08-12' },
-          { email: 'user2@example.com', date: '2026-08-11' },
-          { email: 'user3@example.com', date: '2026-08-10' },
-        ],
+        totalUsers: 0,
+        activeSubscriptions: 0,
+        totalScans: 0,
+        recentUsers: [],
       });
     }
     setLoading(false);

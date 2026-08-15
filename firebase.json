@@ -8,26 +8,14 @@
       "database.json",
       "uploads/**",
       "functions/**",
-      "render.yaml",
       "deploy.bat",
       "package-lock.json"
     ],
     "rewrites": [
       {
-        "source": "/api/**",
-        "function": "api"
-      },
-      {
         "source": "**",
         "destination": "/index.html"
       }
     ]
-  },
-  "functions": [
-    {
-      "source": ".",
-      "codebase": "default",
-      "runtime": "nodejs18"
-    }
-  ]
+  }
 }

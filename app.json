@@ -2,7 +2,7 @@
   "expo": {
     "name": "Scal AI",
     "slug": "scai-fd8xk2026",
-    "version": "1.0.46",
+    "version": "1.0.47",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "scalai",
