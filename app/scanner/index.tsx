@@ -171,7 +171,7 @@ export default function ScannerScreen() {
       setScanning(false);
       autoSaveToHistory(food);
       loadTodayLog();
-      scheduleLocalNotification('Scan Complete!', `Found: ${food.name} - ${food.calories} kcal`, { foodName: food.name, calories: food.calories });
+      scheduleLocalNotification('Scan Complete!', `${food.calories} kcal detected`, { calories: food.calories });
     }, 2000);
   };
 
@@ -425,7 +425,7 @@ const styles = StyleSheet.create({
   goalBarFill: { height: '100%', borderRadius: 2 },
   goalValue: { color: Colors.grayLight, fontSize: 8, marginTop: 2 },
   cameraContainer: {
-    height: 180,
+    height: 250,
     marginHorizontal: Spacing.md,
     borderRadius: 16,
     overflow: 'hidden',

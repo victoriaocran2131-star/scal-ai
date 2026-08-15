@@ -28,9 +28,15 @@ export default function ProfileScreen() {
 
   const loadProfile = async () => {
     try {
-      const user = JSON.parse(await AsyncStorage.getItem('scalai_user') || '{}');
-      setFullName(user.fullName || '');
-      setEmail(user.email || '');
+      const result = await api.getProfile();
+      if (result.success && result.user) {
+        setFullName(result.user.fullName || '');
+        setEmail(result.user.email || '');
+      } else {
+        const cached = JSON.parse(await AsyncStorage.getItem('scalai_user') || '{}');
+        setFullName(cached.fullName || '');
+        setEmail(cached.email || '');
+      }
 
       const subResult = await api.checkSubscription();
       if (subResult.subscription) {
@@ -50,11 +56,12 @@ export default function ProfileScreen() {
 
     setSaving(true);
     try {
-      await AsyncStorage.setItem('scalai_user', JSON.stringify({
-        ...JSON.parse(await AsyncStorage.getItem('scalai_user') || '{}'),
-        fullName: fullName.trim(),
-      }));
-      Alert.alert('Success', 'Profile updated!');
+      const result = await api.updateProfile(fullName.trim());
+      if (result.success) {
+        Alert.alert('Success', 'Profile updated!');
+      } else {
+        Alert.alert('Error', result.error || 'Failed to update profile');
+      }
     } catch (error) {
       Alert.alert('Error', 'Failed to update profile');
     }
@@ -89,9 +96,14 @@ export default function ProfileScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            await api.signOut();
-            await AsyncStorage.clear();
-            router.replace('/welcome');
+            setLoading(true);
+            const result = await api.deleteAccount();
+            if (result.success) {
+              router.replace('/welcome');
+            } else {
+              setLoading(false);
+              Alert.alert('Error', result.error || 'Failed to delete account');
+            }
           },
         },
       ]

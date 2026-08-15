@@ -5,6 +5,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  deleteUser,
 } from 'firebase/auth';
 import {
   collection,
@@ -13,11 +14,13 @@ import {
   serverTimestamp,
   setDoc,
   getDoc,
+  getDocs,
+  deleteDoc,
+  query,
+  orderBy,
   Timestamp,
 } from 'firebase/firestore';
 import { isAdmin } from '../constants/admin';
-
-const HISTORY_KEY = 'scalai_history';
 
 interface ApiResponse<T = any> {
   success?: boolean;
@@ -47,17 +50,10 @@ class ApiService {
     return this.currentUser?.uid || auth.currentUser?.uid || null;
   }
 
-  private async getHistoryLocal(): Promise<any[]> {
-    try {
-      const raw = await AsyncStorage.getItem(HISTORY_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
-  }
-
-  private async saveHistoryLocal(items: any[]): Promise<void> {
-    await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(items));
+  private getUserHistoryRef() {
+    const uid = this.getUserId();
+    if (!uid) return null;
+    return collection(db, 'users', uid, 'history');
   }
 
   // ==================== AUTH ====================
@@ -122,6 +118,7 @@ class ApiService {
     await AsyncStorage.removeItem('scalai_user');
     await AsyncStorage.removeItem('hasActiveSubscription');
     await AsyncStorage.removeItem('subscriptionInfo');
+    await AsyncStorage.removeItem('isAdmin');
   }
 
   async getProfile(): Promise<ApiResponse> {
@@ -139,7 +136,23 @@ class ApiService {
     }
   }
 
-  // ==================== HISTORY (LOCAL) ====================
+  async updateProfile(fullName: string): Promise<ApiResponse> {
+    try {
+      const uid = this.getUserId();
+      if (!uid) return { error: 'Not authenticated' };
+
+      await setDoc(doc(db, 'users', uid), { fullName }, { merge: true });
+
+      const cached = JSON.parse(await AsyncStorage.getItem('scalai_user') || '{}');
+      await AsyncStorage.setItem('scalai_user', JSON.stringify({ ...cached, fullName }));
+
+      return { success: true };
+    } catch (error: any) {
+      return { error: 'Failed to update profile' };
+    }
+  }
+
+  // ==================== HISTORY (FIRESTORE) ====================
 
   async addHistory(item: {
     calories: number;
@@ -151,9 +164,10 @@ class ApiService {
     digestion: string;
   }): Promise<ApiResponse> {
     try {
-      const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-      const entry = {
-        id,
+      const historyRef = this.getUserHistoryRef();
+      if (!historyRef) return { error: 'Not authenticated' };
+
+      await addDoc(historyRef, {
         calories: item.calories,
         protein: item.protein,
         fat: item.fat,
@@ -162,11 +176,7 @@ class ApiService {
         sugar: item.sugar || 0,
         digestion: item.digestion,
         createdAt: new Date().toISOString(),
-      };
-
-      const items = await this.getHistoryLocal();
-      items.unshift(entry);
-      await this.saveHistoryLocal(items);
+      });
 
       return { success: true };
     } catch (error: any) {
@@ -176,21 +186,26 @@ class ApiService {
 
   async getHistory(filter: string = 'all'): Promise<ApiResponse> {
     try {
-      let items = await this.getHistoryLocal();
+      const uid = this.getUserId();
+      if (!uid) return { history: [] };
+
+      const historyRef = collection(db, 'users', uid, 'history');
+      const q = query(historyRef, orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(q);
+
+      let items = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 
       const now = new Date();
       if (filter === 'today') {
         const today = now.toISOString().split('T')[0];
-        items = items.filter((h) => h.createdAt.split('T')[0] === today);
+        items = items.filter((h: any) => h.createdAt?.split('T')[0] === today);
       } else if (filter === 'week') {
         const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        items = items.filter((h) => new Date(h.createdAt) >= weekAgo);
+        items = items.filter((h: any) => new Date(h.createdAt) >= weekAgo);
       } else if (filter === 'month') {
         const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        items = items.filter((h) => new Date(h.createdAt) >= monthAgo);
+        items = items.filter((h: any) => new Date(h.createdAt) >= monthAgo);
       }
-
-      items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
       return { success: true, history: items };
     } catch (error: any) {
@@ -200,9 +215,10 @@ class ApiService {
 
   async deleteHistory(id: string): Promise<ApiResponse> {
     try {
-      const items = await this.getHistoryLocal();
-      const filtered = items.filter((h) => h.id !== id);
-      await this.saveHistoryLocal(filtered);
+      const uid = this.getUserId();
+      if (!uid) return { error: 'Not authenticated' };
+
+      await deleteDoc(doc(db, 'users', uid, 'history', id));
       return { success: true };
     } catch (error: any) {
       return { error: 'Failed to delete history' };
@@ -211,29 +227,37 @@ class ApiService {
 
   async clearHistory(): Promise<ApiResponse> {
     try {
-      await AsyncStorage.removeItem(HISTORY_KEY);
+      const uid = this.getUserId();
+      if (!uid) return { error: 'Not authenticated' };
+
+      const historyRef = collection(db, 'users', uid, 'history');
+      const snapshot = await getDocs(historyRef);
+      const deletions = snapshot.docs.map((d) => deleteDoc(d.ref));
+      await Promise.all(deletions);
+
       return { success: true };
     } catch (error: any) {
       return { error: 'Failed to clear history' };
     }
   }
 
-  // ==================== STATS (COMPUTED FROM LOCAL) ====================
+  // ==================== STATS (FROM FIRESTORE) ====================
 
   async getStats(): Promise<ApiResponse> {
     try {
-      const items = await this.getHistoryLocal();
+      const result = await this.getHistory('all');
+      const items = result.history || [];
 
-      const totalCalories = items.reduce((sum, item) => sum + (item.calories || 0), 0);
-      const totalProtein = items.reduce((sum, item) => sum + (item.protein || 0), 0);
-      const totalFat = items.reduce((sum, item) => sum + (item.fat || 0), 0);
-      const totalCarbs = items.reduce((sum, item) => sum + (item.carbs || 0), 0);
-      const totalFiber = items.reduce((sum, item) => sum + (item.fiber || 0), 0);
-      const totalSugar = items.reduce((sum, item) => sum + (item.sugar || 0), 0);
+      const totalCalories = items.reduce((sum: number, item: any) => sum + (item.calories || 0), 0);
+      const totalProtein = items.reduce((sum: number, item: any) => sum + (item.protein || 0), 0);
+      const totalFat = items.reduce((sum: number, item: any) => sum + (item.fat || 0), 0);
+      const totalCarbs = items.reduce((sum: number, item: any) => sum + (item.carbs || 0), 0);
+      const totalFiber = items.reduce((sum: number, item: any) => sum + (item.fiber || 0), 0);
+      const totalSugar = items.reduce((sum: number, item: any) => sum + (item.sugar || 0), 0);
       const totalScans = items.length;
 
       const today = new Date().toISOString().split('T')[0];
-      const todayScans = items.filter((h) => h.createdAt.split('T')[0] === today).length;
+      const todayScans = items.filter((h: any) => h.createdAt?.split('T')[0] === today).length;
 
       return {
         success: true,
@@ -255,17 +279,16 @@ class ApiService {
 
   async getTodayLog(): Promise<ApiResponse> {
     try {
-      const items = await this.getHistoryLocal();
-      const today = new Date().toISOString().split('T')[0];
-      const todayItems = items.filter((h) => h.createdAt.split('T')[0] === today);
+      const result = await this.getHistory('today');
+      const todayItems = result.history || [];
 
       const log = {
-        totalCalories: todayItems.reduce((sum, item) => sum + (item.calories || 0), 0),
-        totalProtein: todayItems.reduce((sum, item) => sum + (item.protein || 0), 0),
-        totalFat: todayItems.reduce((sum, item) => sum + (item.fat || 0), 0),
-        totalCarbs: todayItems.reduce((sum, item) => sum + (item.carbs || 0), 0),
-        totalFiber: todayItems.reduce((sum, item) => sum + (item.fiber || 0), 0),
-        totalSugar: todayItems.reduce((sum, item) => sum + (item.sugar || 0), 0),
+        totalCalories: todayItems.reduce((sum: number, item: any) => sum + (item.calories || 0), 0),
+        totalProtein: todayItems.reduce((sum: number, item: any) => sum + (item.protein || 0), 0),
+        totalFat: todayItems.reduce((sum: number, item: any) => sum + (item.fat || 0), 0),
+        totalCarbs: todayItems.reduce((sum: number, item: any) => sum + (item.carbs || 0), 0),
+        totalFiber: todayItems.reduce((sum: number, item: any) => sum + (item.fiber || 0), 0),
+        totalSugar: todayItems.reduce((sum: number, item: any) => sum + (item.sugar || 0), 0),
         mealCount: todayItems.length,
       };
 
@@ -277,7 +300,8 @@ class ApiService {
 
   async getDailyLogs(days: number = 7): Promise<ApiResponse> {
     try {
-      const items = await this.getHistoryLocal();
+      const result = await this.getHistory('all');
+      const items = result.history || [];
       const now = new Date();
       const logs: any[] = [];
 
@@ -285,16 +309,16 @@ class ApiService {
         const date = new Date(now);
         date.setDate(date.getDate() - i);
         const dateStr = date.toISOString().split('T')[0];
-        const dayItems = items.filter((h) => h.createdAt.split('T')[0] === dateStr);
+        const dayItems = items.filter((h: any) => h.createdAt?.split('T')[0] === dateStr);
 
         logs.push({
           date: dateStr,
-          totalCalories: dayItems.reduce((sum, item) => sum + (item.calories || 0), 0),
-          totalProtein: dayItems.reduce((sum, item) => sum + (item.protein || 0), 0),
-          totalFat: dayItems.reduce((sum, item) => sum + (item.fat || 0), 0),
-          totalCarbs: dayItems.reduce((sum, item) => sum + (item.carbs || 0), 0),
-          totalFiber: dayItems.reduce((sum, item) => sum + (item.fiber || 0), 0),
-          totalSugar: dayItems.reduce((sum, item) => sum + (item.sugar || 0), 0),
+          totalCalories: dayItems.reduce((sum: number, item: any) => sum + (item.calories || 0), 0),
+          totalProtein: dayItems.reduce((sum: number, item: any) => sum + (item.protein || 0), 0),
+          totalFat: dayItems.reduce((sum: number, item: any) => sum + (item.fat || 0), 0),
+          totalCarbs: dayItems.reduce((sum: number, item: any) => sum + (item.carbs || 0), 0),
+          totalFiber: dayItems.reduce((sum: number, item: any) => sum + (item.fiber || 0), 0),
+          totalSugar: dayItems.reduce((sum: number, item: any) => sum + (item.sugar || 0), 0),
           mealCount: dayItems.length,
         });
       }
@@ -311,14 +335,6 @@ class ApiService {
     try {
       const uid = this.getUserId();
       if (!uid) {
-        const localSub = await AsyncStorage.getItem('hasActiveSubscription');
-        const adminFlag = await AsyncStorage.getItem('isAdmin');
-        if (adminFlag === 'true') {
-          return { hasActiveSubscription: true, subscription: { plan: 'admin', daysRemaining: 36500 } };
-        }
-        if (localSub === 'true') {
-          return { hasActiveSubscription: true };
-        }
         return { hasActiveSubscription: false };
       }
 
@@ -352,14 +368,6 @@ class ApiService {
 
       return { hasActiveSubscription: false };
     } catch (error: any) {
-      const localSub = await AsyncStorage.getItem('hasActiveSubscription');
-      const adminFlag = await AsyncStorage.getItem('isAdmin');
-      if (adminFlag === 'true') {
-        return { hasActiveSubscription: true, subscription: { plan: 'admin', daysRemaining: 36500 } };
-      }
-      if (localSub === 'true') {
-        return { hasActiveSubscription: true };
-      }
       return { hasActiveSubscription: false };
     }
   }
@@ -394,12 +402,6 @@ class ApiService {
         activatedAt: serverTimestamp(),
       });
 
-      await AsyncStorage.setItem('hasActiveSubscription', 'true');
-      await AsyncStorage.setItem('subscriptionInfo', JSON.stringify({
-        plan: planId,
-        daysRemaining: Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)),
-      }));
-
       return { success: true };
     } catch (error: any) {
       return { error: 'Failed to activate subscription' };
@@ -424,6 +426,35 @@ class ApiService {
       return { goals: { calories: 2000, protein: 50, fat: 65, carbs: 300 } };
     } catch (error: any) {
       return { goals: { calories: 2000, protein: 50, fat: 65, carbs: 300 } };
+    }
+  }
+
+  // ==================== DELETE ACCOUNT ====================
+
+  async deleteAccount(): Promise<ApiResponse> {
+    try {
+      const uid = this.getUserId();
+      if (!uid) return { error: 'Not authenticated' };
+
+      const historyRef = collection(db, 'users', uid, 'history');
+      const historySnapshot = await getDocs(historyRef);
+      const historyDeletions = historySnapshot.docs.map((d) => deleteDoc(d.ref));
+      await Promise.all(historyDeletions);
+
+      await deleteDoc(doc(db, 'users', uid, 'subscription', 'current')).catch(() => {});
+      await deleteDoc(doc(db, 'users', uid, 'settings', 'goals')).catch(() => {});
+      await deleteDoc(doc(db, 'users', uid));
+
+      const user = auth.currentUser;
+      if (user) {
+        await deleteUser(user);
+      }
+
+      await AsyncStorage.clear();
+
+      return { success: true };
+    } catch (error: any) {
+      return { error: 'Failed to delete account' };
     }
   }
 
