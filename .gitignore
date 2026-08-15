@@ -13,3 +13,4 @@ dist/
 *.key
 *.mobileprovision
 *.orig.*
+firebase-debug.log
