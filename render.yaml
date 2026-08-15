@@ -3,7 +3,7 @@ services:
     name: scal-ai
     runtime: node
     plan: free
-    buildCommand: npm install
+    buildCommand: cd server && npm install && cd .. && cp -r server/node_modules .
     startCommand: node server.js
     envVars:
       - key: JWT_SECRET

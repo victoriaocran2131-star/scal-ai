@@ -2,7 +2,7 @@
   "expo": {
     "name": "Scal AI",
     "slug": "scai-fd8xk2026",
-    "version": "1.0.41",
+    "version": "1.0.43",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "scalai",
@@ -45,11 +45,11 @@
       ],
       "expo-splash-screen"
     ],
-    "owner": "samuelsparkss-team",
+    "owner": "sam-inventons",
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "7cac127d-35bd-4502-81f0-c3525abfadf6"
+        "projectId": "d5099959-6b92-40a4-a325-67d887360394"
       }
     }
   }

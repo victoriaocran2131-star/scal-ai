@@ -14,10 +14,6 @@
   "dependencies": {
     "@expo/metro-runtime": "~56.0.16",
     "@react-native-async-storage/async-storage": "2.2.0",
-    "bcryptjs": "^2.4.3",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.21.0",
     "expo": "~56.0.19",
     "expo-camera": "~56.0.0",
     "expo-constants": "~56.0.23",
@@ -32,9 +28,6 @@
     "expo-splash-screen": "~56.0.14",
     "expo-status-bar": "~56.0.4",
     "firebase": "^12.17.1",
-    "google-auth-library": "^9.14.1",
-    "jsonwebtoken": "^9.0.2",
-    "multer": "^1.4.5-lts.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.85.3",
@@ -44,8 +37,7 @@
     "react-native-screens": "~4.26.0",
     "react-native-web": "^0.21.2",
     "react-native-webview": "13.16.1",
-    "react-native-worklets": "0.8.3",
-    "uuid": "^9.0.1"
+    "react-native-worklets": "0.8.3"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
