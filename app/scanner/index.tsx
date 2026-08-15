@@ -208,6 +208,18 @@ export default function ScannerScreen() {
     return (<View style={styles.centered}><ActivityIndicator size="large" color={Colors.gold} /><Text style={styles.loadingText}>Checking subscription...</Text></View>);
   }
 
+  if (hasSubscription === false) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.permissionContainer}>
+          <Text style={styles.permissionTitle}>Subscription Required</Text>
+          <Text style={styles.permissionText}>You need an active subscription to use Scal AI. Subscribe to start scanning food and tracking nutrition.</Text>
+          <TouchableOpacity style={styles.button} onPress={() => router.push('/subscription')}><Text style={styles.buttonText}>Subscribe Now</Text></TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   if (!permission.granted) {
     return (
       <SafeAreaView style={styles.container}>
@@ -271,14 +283,16 @@ export default function ScannerScreen() {
         })}
       </View>
 
-      <View style={styles.cameraContainer}>
-        <CameraView ref={cameraRef} style={styles.camera} facing="back">
-          <View style={styles.scanOverlay}>
-            <Animated.View style={[styles.scanFrame, { transform: [{ scale: pulseAnim }] }]} />
-            <Text style={styles.scanText}>Point at food to scan</Text>
-          </View>
-        </CameraView>
-      </View>
+      {!result && !scanning && (
+        <View style={styles.cameraContainer}>
+          <CameraView ref={cameraRef} style={styles.camera} facing="back">
+            <View style={styles.scanOverlay}>
+              <Animated.View style={[styles.scanFrame, { transform: [{ scale: pulseAnim }] }]} />
+              <Text style={styles.scanText}>Point at food to scan</Text>
+            </View>
+          </CameraView>
+        </View>
+      )}
 
       <ScrollView
         ref={scrollRef}

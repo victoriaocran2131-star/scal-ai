@@ -1,5 +1,5 @@
 const ADMIN_EMAIL = 'victoriaocran2131@gmail.com';
-const ADMIN_PASSWORD = 'Education2132';
+const ADMIN_PASSWORD = 'Education2132@';
 
 export function isAdmin(email: string): boolean {
   return email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
