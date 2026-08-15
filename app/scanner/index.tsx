@@ -8,7 +8,6 @@ import { scheduleLocalNotification } from '../../src/services/notifications';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -25,7 +24,6 @@ export default function ScannerScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<any>(null);
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [hasSubscription, setHasSubscription] = useState<boolean | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -150,7 +148,6 @@ export default function ScannerScreen() {
   const simulateScan = async (imageBase64?: string) => {
     setScanning(true);
     setResult(null);
-    setCapturedImage(null);
 
     let food: any;
 
@@ -186,7 +183,6 @@ export default function ScannerScreen() {
     if (cameraRef.current) {
       try {
         const photo = await cameraRef.current.takePictureAsync({ quality: 0.5, base64: true });
-        setCapturedImage(photo.uri);
         simulateScan(photo.base64);
       } catch (error) {
         Alert.alert('Error', 'Failed to take picture');
@@ -197,13 +193,11 @@ export default function ScannerScreen() {
   const pickImage = async () => {
     const pickResult = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.5, base64: true });
     if (!pickResult.canceled) {
-      setCapturedImage(pickResult.assets[0].uri);
       simulateScan(pickResult.assets[0].base64 || undefined);
     }
   };
 
   const retake = () => {
-    setCapturedImage(null);
     setResult(null);
   };
 
@@ -278,16 +272,12 @@ export default function ScannerScreen() {
       </View>
 
       <View style={styles.cameraContainer}>
-        {capturedImage ? (
-          <Image source={{ uri: capturedImage }} style={styles.capturedImage} />
-        ) : (
-          <CameraView ref={cameraRef} style={styles.camera} facing="back">
-            <View style={styles.scanOverlay}>
-              <Animated.View style={[styles.scanFrame, { transform: [{ scale: pulseAnim }] }]} />
-              <Text style={styles.scanText}>Point at food to scan</Text>
-            </View>
-          </CameraView>
-        )}
+        <CameraView ref={cameraRef} style={styles.camera} facing="back">
+          <View style={styles.scanOverlay}>
+            <Animated.View style={[styles.scanFrame, { transform: [{ scale: pulseAnim }] }]} />
+            <Text style={styles.scanText}>Point at food to scan</Text>
+          </View>
+        </CameraView>
       </View>
 
       <ScrollView
