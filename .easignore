@@ -1,0 +1,16 @@
+node_modules/
+server/
+.expo/
+dist/
+www/
+*.p8
+*.p12
+*.jks
+*.mobileprovision
+firebase-debug.log
+database.json
+uploads/
+scripts/
+app-store-screenshots/
+.vscode/
+.git/
