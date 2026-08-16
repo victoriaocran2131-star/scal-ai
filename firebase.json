@@ -3,21 +3,16 @@
     "rules": "firestore.rules"
   },
   "hosting": {
-    "public": ".",
+    "public": "web",
     "ignore": [
       "firebase.json",
       "**/.*",
-      "**/node_modules/**",
-      "database.json",
-      "uploads/**",
-      "functions/**",
-      "deploy.bat",
-      "package-lock.json"
+      "**/node_modules/**"
     ],
     "rewrites": [
       {
         "source": "**",
-        "destination": "/index.html"
+        "destination": "/support.html"
       }
     ]
   }
