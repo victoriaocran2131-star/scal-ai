@@ -13,7 +13,7 @@ interface AdminStats {
   recentUsers: Array<{ email: string; date: string }>;
 }
 
-const ADMIN_EMAIL = 'victoriaocran2131@gmail.com';
+const ADMIN_EMAIL = 'victoria2132@gmail.com';
 const ADMIN_PASSWORD = 'Education2132@';
 
 export default function AdminDashboard() {
@@ -191,7 +191,7 @@ export default function AdminDashboard() {
         <View style={dashStyles.header}>
           <View style={dashStyles.headerLeft}>
             <Text style={dashStyles.greeting}>Admin Dashboard</Text>
-            <Text style={dashStyles.email}>victoriaocran2131@gmail.com</Text>
+            <Text style={dashStyles.email}>victoria2132@gmail.com</Text>
           </View>
           <TouchableOpacity style={dashStyles.logoutButton} onPress={handleLogout}>
             <Text style={dashStyles.logoutText}>Logout</Text>
