@@ -16,9 +16,17 @@
         "UIBackgroundModes": [
           "remote-notification"
         ],
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleURLTypes": [
+          {
+            "CFBundleTypeRole": "Editor",
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.619950294984-lqnkp7k7d7of52j5m3p4e4v5qs3njt1f"
+            ]
+          }
+        ]
       },
-      "buildNumber": "7"
+      "buildNumber": "8"
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
@@ -44,7 +52,8 @@
           "color": "#D4AF37"
         }
       ],
-      "expo-splash-screen"
+      "expo-splash-screen",
+      "expo-web-browser"
     ],
     "owner": "sam-inventons",
     "extra": {

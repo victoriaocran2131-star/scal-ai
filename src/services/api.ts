@@ -6,6 +6,8 @@ import {
   signOut,
   onAuthStateChanged,
   deleteUser,
+  GoogleAuthProvider,
+  signInWithCredential,
 } from 'firebase/auth';
 import {
   collection,
@@ -110,6 +112,42 @@ class ApiService {
         ? 'Incorrect password.'
         : error.message || 'Failed to sign in';
       return { error: message };
+    }
+  }
+
+  async googleSignIn(idToken: string): Promise<ApiResponse> {
+    try {
+      const credential = GoogleAuthProvider.credential(idToken);
+      const userCredential = await signInWithCredential(auth, credential);
+      const user = userCredential.user;
+
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const isNewUser = !userDoc.exists();
+
+      if (isNewUser) {
+        await setDoc(doc(db, 'users', user.uid), {
+          fullName: user.displayName || '',
+          email: user.email || '',
+          photoURL: user.photoURL || null,
+          createdAt: serverTimestamp(),
+        });
+      }
+
+      await AsyncStorage.setItem('scalai_user', JSON.stringify({
+        uid: user.uid,
+        fullName: user.displayName || '',
+        email: user.email || '',
+        photoURL: user.photoURL || null,
+      }));
+
+      if (user.email && isAdmin(user.email)) {
+        await AsyncStorage.setItem('isAdmin', 'true');
+      }
+
+      return { success: true, user: { uid: user.uid, fullName: user.displayName, email: user.email }, isNewUser };
+    } catch (error: any) {
+      console.log('[API] googleSignIn error:', error.message);
+      return { error: error.message || 'Failed to sign in with Google' };
     }
   }
 

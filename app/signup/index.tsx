@@ -11,14 +11,39 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
 import { api } from '../../src/services/api';
 import { Colors, FontSize, Spacing } from '../../src/constants/theme';
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function SignUpScreen() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    clientId: '619950294984-lqnkp7k7d7of52j5m3p4e4v5qs3njt1f.apps.googleusercontent.com',
+    iosClientId: '619950294984-lqnkp7k7d7of52j5m3p4e4v5qs3njt1f.apps.googleusercontent.com',
+  });
+
+  if (response?.type === 'success') {
+    const { id_token } = response.params;
+    if (googleLoading) {
+      setGoogleLoading(false);
+      api.googleSignIn(id_token).then((result) => {
+        if (result.success) {
+          Alert.alert('Success', result.isNewUser ? 'Account created with Google!' : 'Welcome back!');
+          router.push('/scanner');
+        } else {
+          Alert.alert('Error', result.error || 'Google sign-in failed');
+        }
+      });
+    }
+  }
 
   const handleSignUp = async () => {
     if (!fullName || !email || !password) {
@@ -41,6 +66,16 @@ export default function SignUpScreen() {
       ]);
     } else {
       Alert.alert('Error', result.error || 'Failed to create account');
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    try {
+      await promptAsync();
+    } catch (error) {
+      setGoogleLoading(false);
+      Alert.alert('Error', 'Google sign-in failed');
     }
   };
 
@@ -108,6 +143,24 @@ export default function SignUpScreen() {
               onPress={() => router.push('/signin')}
             >
               <Text style={styles.linkText}>Already have an account? Sign In</Text>
+            </TouchableOpacity>
+
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>OR</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <TouchableOpacity
+              style={styles.googleButton}
+              onPress={handleGoogleSignIn}
+              disabled={!request || googleLoading}
+            >
+              {googleLoading ? (
+                <ActivityIndicator color={Colors.white} />
+              ) : (
+                <Text style={styles.googleButtonText}>G  Continue with Google</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -183,5 +236,35 @@ const styles = StyleSheet.create({
   linkText: {
     color: Colors.gold,
     fontSize: FontSize.medium,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.sm,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  dividerText: {
+    color: Colors.gray,
+    fontSize: FontSize.small,
+    marginHorizontal: Spacing.md,
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4285F4',
+    paddingVertical: Spacing.md,
+    borderRadius: 12,
+    gap: Spacing.sm,
+  },
+  googleButtonText: {
+    color: Colors.white,
+    fontSize: FontSize.medium,
+    fontWeight: 'bold',
   },
 });
