@@ -1,6 +1,7 @@
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router, useNavigation } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import {
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -26,29 +27,36 @@ interface DayLog {
 export default function ChartsScreen() {
   const [period, setPeriod] = useState<Period>(7);
   const [dailyLogs, setDailyLogs] = useState<DayLog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const navigation = useNavigation();
+
+  const loadData = async () => {
+    try {
+      const result = await api.getDailyLogs(period);
+      if (result.success && result.logs) {
+        setDailyLogs(fillMissingDays(result.logs));
+      }
+    } catch (err) {
+      console.error('Failed to load chart data:', err);
+    }
+  };
 
   useEffect(() => {
     loadData();
   }, [period]);
 
-  const loadData = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await api.getDailyLogs(period);
-      if (result.success && result.logs) {
-        setDailyLogs(fillMissingDays(result.logs));
-      } else {
-        setError(result.error || 'Failed to load chart data');
-      }
-    } catch (err) {
-      console.error('Failed to load data:', err);
-      setError('Something went wrong. Please try again.');
-    }
-    setLoading(false);
-  };
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadData();
+    });
+    return unsubscribe;
+  }, [navigation, period]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  }, [period]);
 
   const fillMissingDays = (logs: any[]): DayLog[] => {
     const filled: DayLog[] = [];
@@ -118,7 +126,7 @@ export default function ChartsScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={styles.backBtn}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>📊 Charts</Text>
+        <Text style={styles.title}>Charts</Text>
         <View style={{ width: 60 }} />
       </View>
 
@@ -136,21 +144,13 @@ export default function ChartsScreen() {
         ))}
       </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        {loading ? (
-          <Text style={styles.loadingText}>Loading data...</Text>
-        ) : error ? (
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.gold} colors={[Colors.gold]} />}
+      >
+        {dailyLogs.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>⚠️</Text>
-            <Text style={styles.emptyTitle}>Error Loading Data</Text>
-            <Text style={styles.emptyText}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={loadData}>
-              <Text style={styles.retryText}>Retry</Text>
-            </TouchableOpacity>
-          </View>
-        ) : dailyLogs.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>📈</Text>
             <Text style={styles.emptyTitle}>No Data Yet</Text>
             <Text style={styles.emptyText}>Start scanning food to see your nutrition charts!</Text>
           </View>
@@ -174,31 +174,31 @@ export default function ChartsScreen() {
             {renderBarChart(
               dailyLogs.map((d) => d.totalCalories),
               Colors.gold,
-              '🔥 Calories'
+              'Calories'
             )}
 
             {renderBarChart(
               dailyLogs.map((d) => d.totalProtein),
               '#e8a838',
-              '🥩 Protein (g)'
+              'Protein (g)'
             )}
 
             {renderBarChart(
               dailyLogs.map((d) => d.totalCarbs),
               '#5dade2',
-              '🌾 Carbs (g)'
+              'Carbs (g)'
             )}
 
             {renderBarChart(
               dailyLogs.map((d) => d.totalFat),
               '#d4af37',
-              '🫒 Fat (g)'
+              'Fat (g)'
             )}
 
             {renderBarChart(
               dailyLogs.map((d) => d.mealCount),
               '#c9a227',
-              '🍽️ Meals',
+              'Meals',
               Math.max(...dailyLogs.map((d) => d.mealCount), 1)
             )}
           </>
@@ -242,19 +242,9 @@ const styles = StyleSheet.create({
   periodBtnTextActive: { color: Colors.black, fontWeight: 'bold' },
   content: { flex: 1 },
   contentContainer: { padding: Spacing.lg, paddingBottom: Spacing.xxl },
-  loadingText: { color: Colors.grayLight, textAlign: 'center', marginTop: 40 },
   emptyState: { alignItems: 'center', marginTop: 60 },
-  emptyIcon: { fontSize: 48, marginBottom: Spacing.md },
   emptyTitle: { fontSize: FontSize.xlarge, color: Colors.white, fontWeight: 'bold' },
   emptyText: { color: Colors.grayLight, marginTop: Spacing.sm, textAlign: 'center' },
-  retryButton: {
-    marginTop: Spacing.lg,
-    backgroundColor: Colors.gold,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.xl,
-    borderRadius: 12,
-  },
-  retryText: { color: Colors.black, fontWeight: 'bold', fontSize: FontSize.medium },
   summaryRow: {
     flexDirection: 'row',
     gap: Spacing.sm,

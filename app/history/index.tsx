@@ -1,8 +1,9 @@
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router, useNavigation } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -18,6 +19,8 @@ interface HistoryItem {
   protein: number;
   fat: number;
   carbs: number;
+  fiber: number;
+  sugar: number;
   digestion: string;
   createdAt: string;
 }
@@ -25,19 +28,38 @@ interface HistoryItem {
 export default function HistoryScreen() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState('all');
+  const navigation = useNavigation();
 
-  const loadHistory = async () => {
-    setLoading(true);
-    const result = await api.getHistory(filter);
-    if (result.success) {
-      setHistory(result.history || []);
+  const loadHistory = async (showLoader = true) => {
+    if (showLoader) setLoading(true);
+    try {
+      const result = await api.getHistory(filter);
+      if (result.success) {
+        setHistory(result.history || []);
+      }
+    } catch (err) {
+      console.error('Failed to load history:', err);
     }
     setLoading(false);
   };
 
   useEffect(() => {
     loadHistory();
+  }, [filter]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadHistory(false);
+    });
+    return unsubscribe;
+  }, [navigation, filter]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadHistory(false);
+    setRefreshing(false);
   }, [filter]);
 
   const formatDate = (dateString: string) => {
@@ -108,6 +130,7 @@ export default function HistoryScreen() {
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.gold} colors={[Colors.gold]} />}
           ListEmptyComponent={
             <View style={styles.empty}>
               <Text style={styles.emptyText}>No scans yet</Text>

@@ -158,7 +158,6 @@ const styles = StyleSheet.create({
   shimmer: { flex: 1, backgroundColor: 'rgba(255,255,255,0.1)' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   foodNameContainer: { flex: 1 },
-  foodName: { fontSize: 28, fontWeight: 'bold', color: '#fff', textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 5 },
   impactBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, marginTop: 8 },
   impactText: { fontSize: 13, fontWeight: '700' },
   caloriesContainer: { alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 16, padding: 12, minWidth: 80 },
