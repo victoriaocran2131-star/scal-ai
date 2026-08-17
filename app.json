@@ -18,7 +18,7 @@
         ],
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "5"
+      "buildNumber": "6"
     },
     "web": {
       "favicon": "./assets/images/favicon.png"

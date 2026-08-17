@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useRef, useState } from 'react';
-import { Keyboard, ScrollView, Animated, TextInput } from 'react-native';
+import { Keyboard, ScrollView, Animated } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { scheduleLocalNotification } from '../../src/services/notifications';
 import {
@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, FontSize, Spacing } from '../../src/constants/theme';
 import { api } from '../../src/services/api';
-import { searchFood, getRandomFood, getFoodByImageHash } from '../../src/data/foodDatabase';
+import { getRandomFood, getFoodByImageHash } from '../../src/data/foodDatabase';
 import KidneyDiagram from '../../src/components/KidneyDiagram';
 import ScanResult3D from '../../src/components/ScanResult3D';
 
@@ -25,9 +25,6 @@ export default function ScannerScreen() {
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [hasSubscription, setHasSubscription] = useState<boolean | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
   const [todayLog, setTodayLog] = useState({ totalCalories: 0, totalProtein: 0, totalFat: 0, totalCarbs: 0 });
   const [goals, setGoals] = useState({ calories: 2000, protein: 50, fat: 65, carbs: 300 });
   const cameraRef = useRef<any>(null);
@@ -105,23 +102,6 @@ export default function ScannerScreen() {
     } catch (error) {}
   };
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    if (query.length < 1) { setSearchResults([]); setShowSuggestions(false); return; }
-    const results = searchFood(query);
-    setSearchResults(results);
-    setShowSuggestions(results.length > 0);
-  };
-
-  const selectSearchResult = (food: any) => {
-    setResult(food);
-    setSearchQuery('');
-    setSearchResults([]);
-    setShowSuggestions(false);
-    autoSaveToHistory(food);
-    loadTodayLog();
-  };
-
   const IMAGE_CACHE_KEY = 'scalai_image_cache';
 
   const getImageCache = async (): Promise<Record<string, any>> => {
@@ -166,11 +146,11 @@ export default function ScannerScreen() {
       food = getRandomFood();
     }
 
-    setTimeout(() => {
+    setTimeout(async () => {
       setResult(food);
       setScanning(false);
-      autoSaveToHistory(food);
-      loadTodayLog();
+      await autoSaveToHistory(food);
+      await loadTodayLog();
       scheduleLocalNotification('Scan Complete!', `${food.calories} kcal detected`, { calories: food.calories });
     }, 2000);
   };
@@ -245,22 +225,6 @@ export default function ScannerScreen() {
           <TouchableOpacity onPress={() => router.push('/profile')} style={styles.headerBtn}><Text style={styles.headerBtnText}>👤</Text></TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/about')} style={styles.headerBtn}><Text style={styles.headerBtnText}>ℹ️</Text></TouchableOpacity>
         </View>
-      </View>
-
-      <View style={styles.searchContainer}>
-        <TextInput style={styles.searchInput} placeholder="🔍 Search food manually..." placeholderTextColor="#666" value={searchQuery} onChangeText={handleSearch} onFocus={() => searchResults.length > 0 && setShowSuggestions(true)} />
-        {showSuggestions && searchResults.length > 0 && (
-          <View style={styles.suggestionsDropdown}>
-            <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled>
-              {searchResults.map((food, i) => (
-                <TouchableOpacity key={i} style={styles.suggestionItem} onPress={() => selectSearchResult(food)}>
-                  <Text style={styles.suggestionName}>{food.name.charAt(0).toUpperCase() + food.name.slice(1)}</Text>
-                  <Text style={styles.suggestionCal}>{food.calories} cal</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
       </View>
 
       <View style={styles.goalsBar}>
@@ -367,45 +331,6 @@ const styles = StyleSheet.create({
   headerBtnText: {
     fontSize: 20,
   },
-  searchContainer: {
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.xs,
-    zIndex: 10,
-    position: 'relative',
-  },
-  searchInput: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 12,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    color: Colors.white,
-    fontSize: FontSize.medium,
-    borderWidth: 1,
-    borderColor: 'rgba(212,175,55,0.3)',
-  },
-  suggestionsDropdown: {
-    position: 'absolute',
-    top: 40,
-    left: Spacing.lg,
-    right: Spacing.lg,
-    backgroundColor: '#222',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(212,175,55,0.3)',
-    zIndex: 100,
-    overflow: 'hidden',
-  },
-  suggestionItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
-  },
-  suggestionName: { color: Colors.white, fontSize: FontSize.medium },
-  suggestionCal: { color: Colors.gold, fontSize: FontSize.small },
   goalsBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
