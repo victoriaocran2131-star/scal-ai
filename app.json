@@ -16,17 +16,9 @@
         "UIBackgroundModes": [
           "remote-notification"
         ],
-        "ITSAppUsesNonExemptEncryption": false,
-        "CFBundleURLTypes": [
-          {
-            "CFBundleTypeRole": "Editor",
-            "CFBundleURLSchemes": [
-              "com.googleusercontent.apps.619950294984-lqnkp7k7d7of52j5m3p4e4v5qs3njt1f"
-            ]
-          }
-        ]
+        "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "8"
+      "buildNumber": "9"
     },
     "web": {
       "favicon": "./assets/images/favicon.png"

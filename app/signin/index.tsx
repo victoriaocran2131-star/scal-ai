@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -15,6 +15,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { api } from '../../src/services/api';
 import { Colors, FontSize, Spacing } from '../../src/constants/theme';
+import { GOOGLE_WEB_CLIENT_ID, GOOGLE_IOS_CLIENT_ID, GOOGLE_ANDROID_CLIENT_ID } from '../../src/constants/googleAuth';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -25,23 +26,29 @@ export default function SignInScreen() {
   const [googleLoading, setGoogleLoading] = useState(false);
 
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    clientId: '619950294984-lqnkp7k7d7of52j5m3p4e4v5qs3njt1f.apps.googleusercontent.com',
-    iosClientId: '619950294984-lqnkp7k7d7of52j5m3p4e4v5qs3njt1f.apps.googleusercontent.com',
+    clientId: GOOGLE_WEB_CLIENT_ID,
+    iosClientId: GOOGLE_IOS_CLIENT_ID,
+    androidClientId: GOOGLE_ANDROID_CLIENT_ID,
+    webClientId: GOOGLE_WEB_CLIENT_ID,
   });
 
-  if (response?.type === 'success') {
-    const { id_token } = response.params;
-    if (googleLoading) {
-      setGoogleLoading(false);
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { id_token } = response.params;
+      setGoogleLoading(true);
       api.googleSignIn(id_token).then((result) => {
+        setGoogleLoading(false);
         if (result.success) {
           router.push('/scanner');
         } else {
           Alert.alert('Error', result.error || 'Google sign-in failed');
         }
       });
+    } else if (response?.type === 'error') {
+      setGoogleLoading(false);
+      Alert.alert('Error', 'Google sign-in was cancelled or failed. Make sure your Google OAuth consent screen is published.');
     }
-  }
+  }, [response]);
 
   const handleSignIn = async () => {
     if (!email || !password) {
