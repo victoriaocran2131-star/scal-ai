@@ -340,7 +340,9 @@ class ApiService {
 
       const userDoc = await getDoc(doc(db, 'users', uid));
       const userData = userDoc.data();
-      if (userData?.email && isAdmin(userData.email)) {
+      const authEmail = auth.currentUser?.email || '';
+      const storedEmail = userData?.email || '';
+      if (isAdmin(authEmail) || isAdmin(storedEmail)) {
         return {
           success: true,
           hasActiveSubscription: true,
