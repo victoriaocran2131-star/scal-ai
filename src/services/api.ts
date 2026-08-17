@@ -37,6 +37,7 @@ interface ApiResponse<T = any> {
   hasActiveSubscription?: boolean;
   subscription?: any;
   goals?: any;
+  isNewUser?: boolean;
 }
 
 class ApiService {
@@ -501,20 +502,6 @@ class ApiService {
     }
   }
 
-  // ==================== GENERIC REQUEST ====================
-
-  async request(endpoint: string, options: { method?: string; body?: any } = {}): Promise<ApiResponse> {
-    if (endpoint === '/api/goals') return this.getGoals();
-    if (endpoint === '/api/daily-logs/today') return this.getTodayLog();
-    if (endpoint === '/api/stats') return this.getStats();
-
-    const dailyLogsMatch = endpoint.match(/^\/api\/daily-logs\?days=(\d+)$/);
-    if (dailyLogsMatch) {
-      return this.getDailyLogs(parseInt(dailyLogsMatch[1], 10));
-    }
-
-    return { error: 'Unknown endpoint' };
-  }
 }
 
 export const api = new ApiService();

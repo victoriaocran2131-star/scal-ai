@@ -6,14 +6,10 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Dimensions,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, FontSize, Spacing } from '../../src/constants/theme';
 import { api } from '../../src/services/api';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 type Period = 7 | 14 | 30;
 
@@ -31,6 +27,7 @@ export default function ChartsScreen() {
   const [period, setPeriod] = useState<Period>(7);
   const [dailyLogs, setDailyLogs] = useState<DayLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -38,13 +35,17 @@ export default function ChartsScreen() {
 
   const loadData = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const logsData = await api.request(`/api/daily-logs?days=${period}`);
-      if (logsData && logsData.success && (logsData as any).logs) {
-        setDailyLogs(fillMissingDays((logsData as any).logs));
+      const result = await api.getDailyLogs(period);
+      if (result.success && result.logs) {
+        setDailyLogs(fillMissingDays(result.logs));
+      } else {
+        setError(result.error || 'Failed to load chart data');
       }
-    } catch (error) {
-      console.error('Failed to load data:', error);
+    } catch (err) {
+      console.error('Failed to load data:', err);
+      setError('Something went wrong. Please try again.');
     }
     setLoading(false);
   };
@@ -138,6 +139,15 @@ export default function ChartsScreen() {
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         {loading ? (
           <Text style={styles.loadingText}>Loading data...</Text>
+        ) : error ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyIcon}>⚠️</Text>
+            <Text style={styles.emptyTitle}>Error Loading Data</Text>
+            <Text style={styles.emptyText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={loadData}>
+              <Text style={styles.retryText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
         ) : dailyLogs.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>📈</Text>
@@ -237,6 +247,14 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 48, marginBottom: Spacing.md },
   emptyTitle: { fontSize: FontSize.xlarge, color: Colors.white, fontWeight: 'bold' },
   emptyText: { color: Colors.grayLight, marginTop: Spacing.sm, textAlign: 'center' },
+  retryButton: {
+    marginTop: Spacing.lg,
+    backgroundColor: Colors.gold,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: 12,
+  },
+  retryText: { color: Colors.black, fontWeight: 'bold', fontSize: FontSize.medium },
   summaryRow: {
     flexDirection: 'row',
     gap: Spacing.sm,

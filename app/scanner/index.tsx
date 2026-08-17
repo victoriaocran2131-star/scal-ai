@@ -90,14 +90,14 @@ export default function ScannerScreen() {
 
   const loadGoals = async () => {
     try {
-      const data = await api.request('/api/goals');
+      const data = await api.getGoals();
       if (data && data.success && (data as any).goals) setGoals((data as any).goals);
     } catch (error) {}
   };
 
   const loadTodayLog = async () => {
     try {
-      const data = await api.request('/api/daily-logs/today');
+      const data = await api.getTodayLog();
       if (data && data.success && (data as any).log) setTodayLog((data as any).log);
     } catch (error) {}
   };

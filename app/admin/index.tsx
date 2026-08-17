@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { collection, getDocs, query, orderBy, limit, where } from 'firebase/firestore';
 import { db } from '../../src/services/firebase';
+import { ADMIN_EMAIL, ADMIN_PASSWORD } from '../../src/constants/admin';
 
 interface AdminStats {
   totalUsers: number;
@@ -12,9 +13,6 @@ interface AdminStats {
   totalScans: number;
   recentUsers: Array<{ email: string; date: string }>;
 }
-
-const ADMIN_EMAIL = 'victoria2132@gmail.com';
-const ADMIN_PASSWORD = 'Education2132@';
 
 export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
