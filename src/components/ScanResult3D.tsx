@@ -36,6 +36,19 @@ interface Props {
   food: FoodItem;
 }
 
+function stripFoodName(text: string, name: string): string {
+  if (!text || !name) return text;
+  const lower = text.toLowerCase();
+  const foodLower = name.toLowerCase();
+  const plurals = [name + 's', name + 'es', name.slice(0, -1) + 'ies'];
+  let result = text;
+  for (const p of [foodLower, ...plurals.map(p => p.toLowerCase())]) {
+    result = result.replace(new RegExp('\\b' + p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi'), 'This food');
+  }
+  result = result.replace(/\bThis food\b/i, 'This food');
+  return result;
+}
+
 export default function ScanResult3D({ food }: Props) {
   const scaleAnim = useRef(new Animated.Value(0.3)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
@@ -117,21 +130,21 @@ export default function ScanResult3D({ food }: Props) {
           <View style={styles.digestBadge}>
             <Text style={styles.digestTime}>{food.digestion}</Text>
           </View>
-          <Text style={styles.digestDesc}>{food.digestionDesc}</Text>
+          <Text style={styles.digestDesc}>{stripFoodName(food.digestionDesc, food.name)}</Text>
         </View>
 
         <View style={styles.divider} />
 
         <View style={styles.kidneySection}>
           <Text style={styles.sectionTitle}>Kidney Impact</Text>
-          <Text style={[styles.kidneyImpact, { color: impactColor.primary }]}>{food.kidneyTip}</Text>
+          <Text style={[styles.kidneyImpact, { color: impactColor.primary }]}>{stripFoodName(food.kidneyTip, food.name)}</Text>
         </View>
 
         <View style={styles.divider} />
 
         <View style={styles.factSection}>
           <Text style={styles.sectionTitle}>Did You Know?</Text>
-          <Text style={styles.factText}>{food.fact}</Text>
+          <Text style={styles.factText}>{stripFoodName(food.fact, food.name)}</Text>
         </View>
       </LinearGradient>
     </Animated.View>

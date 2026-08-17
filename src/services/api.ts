@@ -47,7 +47,7 @@ class ApiService {
   }
 
   private getUserId(): string | null {
-    return this.currentUser?.uid || auth.currentUser?.uid || null;
+    return auth.currentUser?.uid || this.currentUser?.uid || null;
   }
 
   private getUserHistoryRef() {
@@ -165,9 +165,11 @@ class ApiService {
   }): Promise<ApiResponse> {
     try {
       const historyRef = this.getUserHistoryRef();
-      if (!historyRef) return { error: 'Not authenticated' };
-
-      await addDoc(historyRef, {
+      if (!historyRef) {
+        console.log('[API] addHistory: No user ID, cannot save');
+        return { error: 'Not authenticated' };
+      }
+      const docRef = await addDoc(historyRef, {
         calories: item.calories,
         protein: item.protein,
         fat: item.fat,
@@ -177,9 +179,10 @@ class ApiService {
         digestion: item.digestion,
         createdAt: new Date().toISOString(),
       });
-
+      console.log('[API] addHistory: Saved with ID', docRef.id);
       return { success: true };
     } catch (error: any) {
+      console.log('[API] addHistory: Error:', error.message);
       return { error: 'Failed to save history' };
     }
   }
@@ -187,7 +190,7 @@ class ApiService {
   async getHistory(filter: string = 'all'): Promise<ApiResponse> {
     try {
       const uid = this.getUserId();
-      if (!uid) return { history: [] };
+      if (!uid) return { success: true, history: [] };
 
       const historyRef = collection(db, 'users', uid, 'history');
       const q = query(historyRef, orderBy('createdAt', 'desc'));
