@@ -147,7 +147,6 @@ class ApiService {
 
       return { success: true, user: { uid: user.uid, fullName: user.displayName, email: user.email }, isNewUser };
     } catch (error: any) {
-      console.log('[API] googleSignIn error:', error.message);
       return { error: error.message || 'Failed to sign in with Google' };
     }
   }
@@ -205,10 +204,9 @@ class ApiService {
     try {
       const historyRef = this.getUserHistoryRef();
       if (!historyRef) {
-        console.log('[API] addHistory: No user ID, cannot save');
         return { error: 'Not authenticated' };
       }
-      const docRef = await addDoc(historyRef, {
+      await addDoc(historyRef, {
         calories: item.calories,
         protein: item.protein,
         fat: item.fat,
@@ -218,10 +216,8 @@ class ApiService {
         digestion: item.digestion,
         createdAt: new Date().toISOString(),
       });
-      console.log('[API] addHistory: Saved with ID', docRef.id);
       return { success: true };
     } catch (error: any) {
-      console.log('[API] addHistory: Error:', error.message);
       return { error: 'Failed to save history' };
     }
   }

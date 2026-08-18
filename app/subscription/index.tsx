@@ -1,52 +1,50 @@
 import { router } from 'expo-router';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Alert,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
   ActivityIndicator,
-  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as InAppPurchases from 'expo-in-app-purchases';
 import { Colors, FontSize, Spacing } from '../../src/constants/theme';
 import { api } from '../../src/services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const PAYMENT_LINKS = {
-  weekly: 'https://paystack.shop/pay/4i-jmyzb7y',
-  monthly: 'https://paystack.shop/pay/iacumhzgpu',
-  yearly: 'https://paystack.shop/pay/wwfe5di8p3',
+const PRODUCT_IDS = {
+  weekly: 'com.scalai.app.weekly',
+  monthly: 'com.scalai.app.monthly',
+  yearly: 'com.scalai.app.yearly',
 };
 
 const plans = [
   {
-    id: 'weekly',
+    id: 'weekly' as const,
     name: 'Weekly',
-    price: 1.99,
-    priceLabel: '$1.99',
+    fallbackPrice: '$1.99',
     period: 'per week',
     badge: 'Pay Weekly',
     features: ['Food Scanning', 'Nutrition Tracking', 'Scan History', 'Daily Goals', 'Charts & Analytics'],
     popular: false,
   },
   {
-    id: 'monthly',
+    id: 'monthly' as const,
     name: 'Monthly',
-    price: 7.99,
-    priceLabel: '$7.99',
+    fallbackPrice: '$7.99',
     period: 'per month',
     badge: 'Most Popular',
     features: ['Food Scanning', 'Nutrition Tracking', 'Scan History', 'Daily Goals', 'Charts & Analytics', 'Meal Reminders'],
     popular: true,
   },
   {
-    id: 'yearly',
+    id: 'yearly' as const,
     name: 'Yearly',
-    price: 49.99,
-    priceLabel: '$49.99',
+    fallbackPrice: '$49.99',
     period: 'per year',
     badge: 'Save 60%',
     features: ['Food Scanning', 'Nutrition Tracking', 'Scan History', 'Daily Goals', 'Charts & Analytics', 'Meal Reminders', 'Best Value'],
@@ -55,66 +53,62 @@ const plans = [
 ];
 
 export default function SubscriptionScreen() {
-  const [selectedPlan, setSelectedPlan] = useState<any>(null);
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [waitingForPayment, setWaitingForPayment] = useState(false);
-  const [dots, setDots] = useState('');
-  const pollingRef = useRef<any>(null);
-  const dotsRef = useRef<any>(null);
+  const [prices, setPrices] = useState<Record<string, string>>({});
 
   useEffect(() => {
+    initIAP();
     return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current);
-      if (dotsRef.current) clearInterval(dotsRef.current);
+      InAppPurchases.disconnectAsync();
     };
   }, []);
 
-  const startPolling = () => {
-    setWaitingForPayment(true);
+  const initIAP = async () => {
+    try {
+      await InAppPurchases.connectAsync();
 
-    // Animate dots
-    dotsRef.current = setInterval(() => {
-      setDots(prev => prev.length >= 3 ? '' : prev + '.');
-    }, 500);
-
-    // Poll subscription status every 3 seconds
-    pollingRef.current = setInterval(async () => {
-      try {
-        const result = await api.checkSubscription();
-        if (result.hasActiveSubscription) {
-          // Subscription activated by webhook!
-          stopPolling();
-          await AsyncStorage.setItem('hasActiveSubscription', 'true');
-          Alert.alert(
-            'Subscription Active!',
-            'Your subscription has been activated. You can now scan food!',
-            [{ text: 'Start Scanning', onPress: () => router.push('/scanner') }]
-          );
+      InAppPurchases.setPurchaseListener(({ responseCode, results }) => {
+        if (responseCode === InAppPurchases.IAPResponseCode.OK && results) {
+          results.forEach(async (purchase) => {
+            if (!purchase.acknowledged) {
+              const planId = Object.entries(PRODUCT_IDS).find(([, pid]) => pid === purchase.productId)?.[0];
+              if (planId) {
+                await api.activateSubscription(planId);
+                await AsyncStorage.setItem('hasActiveSubscription', 'true');
+                await InAppPurchases.finishTransactionAsync(purchase, true);
+                Alert.alert(
+                  'Subscription Active!',
+                  'Your subscription has been activated. You can now scan food!',
+                  [{ text: 'Start Scanning', onPress: () => router.push('/scanner') }]
+                );
+              }
+            }
+          });
+        } else if (responseCode === InAppPurchases.IAPResponseCode.USER_CANCELED) {
+          // User cancelled
+        } else {
+          Alert.alert('Error', 'Payment could not be completed. Please try again.');
         }
-      } catch (error) {
-        // Keep polling
-      }
-    }, 3000);
+        setLoading(false);
+      });
 
-    // Stop polling after 5 minutes
-    setTimeout(() => {
-      if (pollingRef.current) {
-        stopPolling();
-        Alert.alert(
-          'Payment Not Detected',
-          'If you completed payment, please wait a few minutes and try again. The webhook may take time to process.',
-          [{ text: 'OK' }]
-        );
+      const { responseCode, results } = await InAppPurchases.getProductsAsync(
+        Object.values(PRODUCT_IDS)
+      );
+      if (responseCode === InAppPurchases.IAPResponseCode.OK && results) {
+        const priceMap: Record<string, string> = {};
+        for (const product of results) {
+          const planId = Object.entries(PRODUCT_IDS).find(([, pid]) => pid === product.productId)?.[0];
+          if (planId) {
+            priceMap[planId] = product.price;
+          }
+        }
+        setPrices(priceMap);
       }
-    }, 300000);
-  };
-
-  const stopPolling = () => {
-    setWaitingForPayment(false);
-    if (pollingRef.current) clearInterval(pollingRef.current);
-    if (dotsRef.current) clearInterval(dotsRef.current);
-    pollingRef.current = null;
-    dotsRef.current = null;
+    } catch (error) {
+      // IAP init error
+    }
   };
 
   const handleSelectPlan = async () => {
@@ -130,73 +124,47 @@ export default function SubscriptionScreen() {
       return;
     }
 
-    const paymentUrl = PAYMENT_LINKS[selectedPlan.id as keyof typeof PAYMENT_LINKS];
-
-    Alert.alert(
-      'Subscribe',
-      `You will be charged ${selectedPlan.priceLabel} for the ${selectedPlan.name} plan.\n\nUse the SAME email you signed up with (${user.email}).`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Pay Now',
-          onPress: async () => {
-            try {
-              await Linking.openURL(paymentUrl);
-              // Start polling for webhook activation
-              startPolling();
-            } catch (error) {
-              Alert.alert('Error', 'Could not open payment page');
-            }
-          }
-        },
-      ]
-    );
+    setLoading(true);
+    try {
+      const productId = PRODUCT_IDS[selectedPlan as keyof typeof PRODUCT_IDS];
+      await InAppPurchases.purchaseItemAsync(productId);
+    } catch (error) {
+      setLoading(false);
+      Alert.alert('Error', 'Payment could not be completed. Please try again.');
+    }
   };
 
-  // Waiting for payment screen
-  if (waitingForPayment) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.waitingContainer}>
-          <ActivityIndicator size="large" color={Colors.gold} />
-          <Text style={styles.waitingTitle}>Waiting for payment{dots}</Text>
-          <Text style={styles.waitingText}>
-            Complete your payment in the browser.
-          </Text>
-          <Text style={styles.waitingText}>
-            After payment, tap the button below to activate your subscription.
-          </Text>
-          <Text style={styles.waitingSubtext}>
-            Use the same email you signed up with.
-          </Text>
-          <TouchableOpacity
-            style={[styles.cancelButton, { backgroundColor: Colors.gold, borderRadius: 12, paddingHorizontal: 24 }]}
-            onPress={async () => {
-              stopPolling();
-              if (selectedPlan) {
-                const result = await api.activateSubscription(selectedPlan.id);
-                if (result.success) {
-                  await AsyncStorage.setItem('hasActiveSubscription', 'true');
-                  Alert.alert(
-                    'Subscription Active!',
-                    'Your subscription has been activated. You can now scan food!',
-                    [{ text: 'Start Scanning', onPress: () => router.push('/scanner') }]
-                  );
-                } else {
-                  Alert.alert('Error', result.error || 'Failed to activate subscription');
-                }
-              }
-            }}
-          >
-            <Text style={[styles.cancelButtonText, { color: Colors.black, fontWeight: 'bold' }]}>I've Completed Payment</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.cancelButton} onPress={stopPolling}>
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const handleRestorePurchases = async () => {
+    setLoading(true);
+    try {
+      await InAppPurchases.connectAsync();
+      const { responseCode, results } = await InAppPurchases.getPurchaseHistoryAsync();
+      if (responseCode === InAppPurchases.IAPResponseCode.OK && results) {
+        const validPurchase = results.find(
+          (p) => Object.values(PRODUCT_IDS).includes(p.productId)
+        );
+        if (validPurchase) {
+          const planId = Object.entries(PRODUCT_IDS).find(
+            ([, pid]) => pid === validPurchase.productId
+          )?.[0];
+          if (planId) {
+            await api.activateSubscription(planId);
+            await AsyncStorage.setItem('hasActiveSubscription', 'true');
+            Alert.alert(
+              'Purchases Restored!',
+              'Your subscription has been restored.',
+              [{ text: 'Start Scanning', onPress: () => router.push('/scanner') }]
+            );
+          }
+        } else {
+          Alert.alert('No Purchases Found', 'No previous purchases were found to restore.');
+        }
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Could not restore purchases.');
+    }
+    setLoading(false);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -217,9 +185,9 @@ export default function SubscriptionScreen() {
             style={[
               styles.planCard,
               plan.popular && styles.popularCard,
-              selectedPlan?.id === plan.id && styles.selectedCard,
+              selectedPlan === plan.id && styles.selectedCard,
             ]}
-            onPress={() => setSelectedPlan(plan)}
+            onPress={() => setSelectedPlan(plan.id)}
           >
             <View style={styles.badgeRow}>
               <View style={[styles.badge, plan.popular ? styles.popularBadge : styles.regularBadge]}>
@@ -227,7 +195,7 @@ export default function SubscriptionScreen() {
               </View>
             </View>
 
-            <Text style={styles.planPrice}>{plan.priceLabel}</Text>
+            <Text style={styles.planPrice}>{prices[plan.id] || plan.fallbackPrice}</Text>
             <Text style={styles.planPeriod}>{plan.period}</Text>
 
             <View style={styles.features}>
@@ -243,15 +211,15 @@ export default function SubscriptionScreen() {
 
             <View style={[
               styles.radioButton,
-              selectedPlan?.id === plan.id && styles.radioButtonSelected,
+              selectedPlan === plan.id && styles.radioButtonSelected,
             ]}>
-              {selectedPlan?.id === plan.id && <View style={styles.radioInner} />}
+              {selectedPlan === plan.id && <View style={styles.radioInner} />}
             </View>
           </TouchableOpacity>
         ))}
 
         <TouchableOpacity
-          style={[styles.subscribeButton, !selectedPlan && styles.disabledButton]}
+          style={[styles.subscribeButton, (!selectedPlan || loading) && styles.disabledButton]}
           onPress={handleSelectPlan}
           disabled={loading || !selectedPlan}
         >
@@ -259,13 +227,21 @@ export default function SubscriptionScreen() {
             <ActivityIndicator color={Colors.black} />
           ) : (
             <Text style={styles.subscribeButtonText}>
-              {selectedPlan ? `Subscribe for ${selectedPlan.priceLabel}` : 'Select a Plan'}
+              {selectedPlan ? `Subscribe for ${prices[selectedPlan] || plans.find(p => p.id === selectedPlan)?.fallbackPrice}` : 'Select a Plan'}
             </Text>
           )}
         </TouchableOpacity>
 
+        <TouchableOpacity style={styles.restoreButton} onPress={handleRestorePurchases} disabled={loading}>
+          <Text style={styles.restoreText}>Restore Purchases</Text>
+        </TouchableOpacity>
+
         <Text style={styles.terms}>
-          By subscribing, you agree to our Terms of Service and Privacy Policy. You can cancel anytime.
+          By subscribing, you agree to our{' '}
+          <Text style={styles.termsLink} onPress={() => Linking.openURL('https://scalai.app/terms')}>Terms of Service</Text>
+          {' '}and{' '}
+          <Text style={styles.termsLink} onPress={() => Linking.openURL('https://scalai.app/privacy')}>Privacy Policy</Text>.
+          {'\n'}You can cancel anytime in your App Store subscription settings.
         </Text>
       </ScrollView>
     </SafeAreaView>
@@ -413,6 +389,16 @@ const styles = StyleSheet.create({
     fontSize: FontSize.large,
     fontWeight: 'bold',
   },
+  restoreButton: {
+    alignItems: 'center',
+    marginTop: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  restoreText: {
+    color: Colors.gold,
+    fontSize: FontSize.medium,
+    textDecorationLine: 'underline',
+  },
   terms: {
     fontSize: 11,
     color: Colors.gray,
@@ -420,38 +406,8 @@ const styles = StyleSheet.create({
     marginTop: Spacing.md,
     lineHeight: 16,
   },
-  waitingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.xl,
-  },
-  waitingTitle: {
-    fontSize: FontSize.xlarge,
-    color: Colors.white,
-    fontWeight: 'bold',
-    marginTop: Spacing.xl,
-    marginBottom: Spacing.md,
-  },
-  waitingText: {
-    fontSize: FontSize.medium,
-    color: Colors.grayLight,
-    textAlign: 'center',
-    marginBottom: Spacing.sm,
-  },
-  waitingSubtext: {
-    fontSize: 12,
+  termsLink: {
     color: Colors.gold,
-    textAlign: 'center',
-    marginTop: Spacing.md,
-  },
-  cancelButton: {
-    marginTop: Spacing.xl,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.xl,
-  },
-  cancelButtonText: {
-    color: Colors.gray,
-    fontSize: FontSize.medium,
+    textDecorationLine: 'underline',
   },
 });

@@ -9,12 +9,8 @@ export default function RootLayout() {
     registerForPushNotificationsAsync();
 
     const removeListeners = addNotificationListeners(
-      (notification) => {
-        console.log('Notification received:', notification);
-      },
-      (response) => {
-        console.log('Notification clicked:', response);
-      }
+      () => {},
+      () => {}
     );
 
     return () => removeListeners();
@@ -39,7 +35,6 @@ export default function RootLayout() {
         <Stack.Screen name="subscription/index" />
         <Stack.Screen name="history/index" />
         <Stack.Screen name="about/index" />
-        <Stack.Screen name="admin/index" />
         <Stack.Screen name="profile/index" />
       </Stack>
     </SafeAreaProvider>

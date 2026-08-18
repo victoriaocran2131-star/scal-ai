@@ -14,7 +14,6 @@ Notifications.setNotificationHandler({
 
 export async function registerForPushNotificationsAsync(): Promise<string | undefined> {
   if (!Device.isDevice) {
-    console.log('Push notifications require a physical device');
     return undefined;
   }
 
@@ -27,15 +26,12 @@ export async function registerForPushNotificationsAsync(): Promise<string | unde
   }
 
   if (finalStatus !== 'granted') {
-    console.log('Push notification permission not granted');
     return undefined;
   }
 
   const token = await Notifications.getExpoPushTokenAsync({
     projectId: 'scal-ai',
   });
-
-  console.log('Push token:', token.data);
 
   if (Platform.OS === 'android') {
     Notifications.setNotificationChannelAsync('default', {

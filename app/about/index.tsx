@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Image, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, FontSize, Spacing } from '../../src/constants/theme';
 
@@ -32,7 +32,7 @@ export default function AboutScreen() {
           <Text style={styles.sectionTitle}>Our Mission</Text>
           <Text style={styles.sectionText}>
             To empower individuals worldwide to make informed dietary decisions through
-            AI-powered food analysis, promoting healthier lifestyles and better well-being.
+            food analysis, promoting healthier lifestyles and better well-being.
           </Text>
         </View>
 
@@ -47,13 +47,29 @@ export default function AboutScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Features</Text>
           <View style={styles.featureList}>
-            <Text style={styles.feature}>📷 AI-Powered Food Scanning</Text>
+            <Text style={styles.feature}>📷 Food Scanning</Text>
             <Text style={styles.feature}>🔥 Calorie Tracking</Text>
             <Text style={styles.feature}>💪 Protein & Fat Analysis</Text>
             <Text style={styles.feature}>⏱️ Digestion Time Info</Text>
             <Text style={styles.feature}>📊 History & Statistics</Text>
             <Text style={styles.feature}>🔒 Secure Authentication</Text>
           </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Legal</Text>
+          <TouchableOpacity
+            style={styles.linkButton}
+            onPress={() => Linking.openURL('https://scalai.app/privacy')}
+          >
+            <Text style={styles.linkText}>Privacy Policy</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.linkButton}
+            onPress={() => Linking.openURL('https://scalai.app/terms')}
+          >
+            <Text style={styles.linkText}>Terms of Service</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
@@ -66,25 +82,8 @@ export default function AboutScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.version}>Version 1.0.8</Text>
+        <Text style={styles.version}>Version 1.0.50</Text>
         <Text style={styles.copyright}>© 2026 Scal AI. All rights reserved.</Text>
-
-        {/* Hidden admin access - tap version number 5 times */}
-        <TouchableOpacity
-          style={styles.adminAccess}
-          onPress={() => {
-            // @ts-ignore
-            global.adminTapCount = ((global.adminTapCount || 0) + 1);
-            // @ts-ignore
-            if (global.adminTapCount >= 5) {
-              // @ts-ignore
-              global.adminTapCount = 0;
-              router.push('/admin');
-            }
-          }}
-        >
-          <Text style={styles.adminAccessText}>v1.0.8</Text>
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -176,6 +175,16 @@ const styles = StyleSheet.create({
     color: Colors.grayLight,
     paddingVertical: Spacing.xs,
   },
+  linkButton: {
+    backgroundColor: Colors.cardBg,
+    padding: Spacing.md,
+    borderRadius: 12,
+    marginBottom: Spacing.sm,
+  },
+  linkText: {
+    color: Colors.gold,
+    fontSize: FontSize.medium,
+  },
   contactButton: {
     backgroundColor: Colors.cardBg,
     padding: Spacing.md,
@@ -194,14 +203,5 @@ const styles = StyleSheet.create({
     color: Colors.gray,
     textAlign: 'center',
     marginTop: Spacing.sm,
-  },
-  adminAccess: {
-    marginTop: Spacing.xl,
-    alignItems: 'center',
-    padding: Spacing.md,
-  },
-  adminAccessText: {
-    color: 'rgba(255,255,255,0.2)',
-    fontSize: 10,
   },
 });

@@ -157,10 +157,9 @@ export default function ScannerScreen() {
 
   const autoSaveToHistory = async (food: any) => {
     try {
-      const result = await api.addHistory({ calories: food.calories, protein: food.protein, fat: food.fat, carbs: food.carbs, fiber: food.fiber, sugar: food.sugar, digestion: food.digestion });
-      console.log('[SCAN] History save result:', result);
+      await api.addHistory({ calories: food.calories, protein: food.protein, fat: food.fat, carbs: food.carbs, fiber: food.fiber, sugar: food.sugar, digestion: food.digestion });
     } catch (e) {
-      console.log('[SCAN] History save failed:', e);
+      // Silently fail
     }
   };
 

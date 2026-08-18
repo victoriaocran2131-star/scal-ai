@@ -58,7 +58,7 @@ export default function RemindersScreen() {
         setSettings(JSON.parse(saved));
       }
     } catch (error) {
-      console.log('Failed to load settings');
+      // Silently fail
     }
   };
 
@@ -67,7 +67,7 @@ export default function RemindersScreen() {
     try {
       await AsyncStorage.setItem('scalai_notifications', JSON.stringify(newSettings));
     } catch (error) {
-      console.log('Failed to save settings');
+      // Silently fail
     }
   };
 
@@ -140,16 +140,6 @@ export default function RemindersScreen() {
     saveSettings(newSettings);
   };
 
-  const testNotification = async () => {
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: 'Scal AI Test',
-        body: 'Notifications are working! You will receive meal reminders at your set times.',
-      },
-      trigger: null,
-    });
-  };
-
   const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
 
   return (
@@ -158,10 +148,8 @@ export default function RemindersScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={styles.backBtn}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>🔔 Reminders</Text>
-        <TouchableOpacity onPress={testNotification}>
-          <Text style={styles.testBtn}>Test</Text>
-        </TouchableOpacity>
+        <Text style={styles.title}>Reminders</Text>
+        <View style={{ width: 60 }} />
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
@@ -233,7 +221,6 @@ const styles = StyleSheet.create({
   },
   backBtn: { color: Colors.gold, fontSize: FontSize.medium },
   title: { fontSize: FontSize.xlarge, color: Colors.gold, fontWeight: 'bold' },
-  testBtn: { color: Colors.gold, fontSize: FontSize.medium },
   content: { flex: 1 },
   contentContainer: { padding: Spacing.lg, paddingBottom: Spacing.xxl },
   masterCard: {

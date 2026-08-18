@@ -13,12 +13,33 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Scal AI needs camera access to scan food for nutrition analysis.",
         "NSPhotoLibraryUsageDescription": "Scal AI needs photo library access to upload food images.",
+        "NSNotificationsUsageDescription": "Scal AI sends meal reminders to help you track your nutrition.",
         "UIBackgroundModes": [
           "remote-notification"
         ],
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "11"
+      "buildNumber": "13",
+      "ageRating": {
+        "mature": 0,
+        "violenceCartoonFantasy": 0,
+        "realisticViolence": 0,
+        "prolongedGraphicSadRealisticViolence": 0,
+        "profanityCrudeHumor": 0,
+        "matureSuggestive": 0,
+        "horrorFear": 0,
+        "medicalTreatmentInfo": 0,
+        "alcoholTobaccoDrugUse": 0,
+        "nudity": 0,
+        "graphicSexualContentNudity": 0,
+        "gambling": 0,
+        "sexualContentGraphicNudity": 0,
+        "sexualContentNudity": 0,
+        "medicalInfoTreatment": 0,
+        "alcoholTobaccoDrugs": 0,
+        "violence": 0,
+        "graphicMedicalTreatment": 0
+      }
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
@@ -45,7 +66,8 @@
         }
       ],
       "expo-splash-screen",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-in-app-purchases"
     ],
     "owner": "sam-inventons",
     "extra": {
