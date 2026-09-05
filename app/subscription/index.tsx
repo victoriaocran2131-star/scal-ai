@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Alert,
   Linking,
@@ -11,20 +11,41 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as InAppPurchases from 'expo-in-app-purchases';
+import {
+  initConnection,
+  endConnection,
+  fetchProducts,
+  requestPurchase,
+  finishTransaction,
+  purchaseUpdatedListener,
+  Purchase,
+  Product,
+} from 'react-native-iap';
 import { Colors, FontSize, Spacing } from '../../src/constants/theme';
 import { api } from '../../src/services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
-const PRODUCT_IDS = {
-  weekly: 'com.scalai.app.weekly',
-  monthly: 'com.scalai.app.monthly',
-  yearly: 'com.scalai.app.yearly',
-};
+let functions: any;
+let validateReceipt: any;
+
+try {
+  functions = getFunctions();
+  validateReceipt = httpsCallable(functions, 'validateReceipt');
+} catch (e) {
+  // Firebase functions not available
+}
+
+const PRODUCT_IDS = [
+  'com.scalai.app.weekly',
+  'com.scalai.app.monthly',
+  'com.scalai.app.yearly',
+];
 
 const plans = [
   {
     id: 'weekly' as const,
+    productId: 'com.scalai.app.weekly',
     name: 'Weekly',
     fallbackPrice: '$1.99',
     period: 'per week',
@@ -34,6 +55,7 @@ const plans = [
   },
   {
     id: 'monthly' as const,
+    productId: 'com.scalai.app.monthly',
     name: 'Monthly',
     fallbackPrice: '$7.99',
     period: 'per month',
@@ -43,6 +65,7 @@ const plans = [
   },
   {
     id: 'yearly' as const,
+    productId: 'com.scalai.app.yearly',
     name: 'Yearly',
     fallbackPrice: '$49.99',
     period: 'per year',
@@ -56,60 +79,99 @@ export default function SubscriptionScreen() {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [prices, setPrices] = useState<Record<string, string>>({});
+  const [connected, setConnected] = useState(false);
 
   useEffect(() => {
+    let purchaseUpdateSubscription: any;
+
     initIAP();
+
+    try {
+      purchaseUpdateSubscription = purchaseUpdatedListener(handlePurchaseUpdated);
+    } catch (e) {
+      // Purchase listener error
+    }
+
     return () => {
-      InAppPurchases.disconnectAsync();
+      if (purchaseUpdateSubscription) {
+        if (typeof purchaseUpdateSubscription.remove === 'function') {
+          purchaseUpdateSubscription.remove();
+        } else if (typeof purchaseUpdateSubscription === 'function') {
+          purchaseUpdateSubscription();
+        }
+      }
+      endConnection();
     };
   }, []);
 
   const initIAP = async () => {
     try {
-      await InAppPurchases.connectAsync();
-
-      InAppPurchases.setPurchaseListener(({ responseCode, results }) => {
-        if (responseCode === InAppPurchases.IAPResponseCode.OK && results) {
-          results.forEach(async (purchase) => {
-            if (!purchase.acknowledged) {
-              const planId = Object.entries(PRODUCT_IDS).find(([, pid]) => pid === purchase.productId)?.[0];
-              if (planId) {
-                await api.activateSubscription(planId);
-                await AsyncStorage.setItem('hasActiveSubscription', 'true');
-                await InAppPurchases.finishTransactionAsync(purchase, true);
-                Alert.alert(
-                  'Subscription Active!',
-                  'Your subscription has been activated. You can now scan food!',
-                  [{ text: 'Start Scanning', onPress: () => router.push('/scanner') }]
-                );
-              }
-            }
-          });
-        } else if (responseCode === InAppPurchases.IAPResponseCode.USER_CANCELED) {
-          // User cancelled
-        } else {
-          Alert.alert('Error', 'Payment could not be completed. Please try again.');
-        }
-        setLoading(false);
-      });
-
-      const { responseCode, results } = await InAppPurchases.getProductsAsync(
-        Object.values(PRODUCT_IDS)
-      );
-      if (responseCode === InAppPurchases.IAPResponseCode.OK && results) {
-        const priceMap: Record<string, string> = {};
-        for (const product of results) {
-          const planId = Object.entries(PRODUCT_IDS).find(([, pid]) => pid === product.productId)?.[0];
-          if (planId) {
-            priceMap[planId] = product.price;
+      const result = await initConnection();
+      if (result) {
+        setConnected(true);
+        const products = await fetchProducts({ skus: PRODUCT_IDS });
+        if (products && products.length > 0) {
+          const priceMap: Record<string, string> = {};
+          for (const product of products) {
+            const p = product as any;
+            priceMap[p.productId || p.sku] = p.localizedPrice || p.price || '';
           }
+          setPrices(priceMap);
         }
-        setPrices(priceMap);
       }
     } catch (error) {
       // IAP init error
     }
   };
+
+  const handlePurchase = async (productId: string) => {
+    try {
+      await requestPurchase({ sku: productId } as any);
+    } catch (error: any) {
+      if (error?.code !== 'E_USER_CANCELLED') {
+        Alert.alert('Error', 'Payment could not be completed. Please try again.');
+      }
+      setLoading(false);
+    }
+  };
+
+  const handlePurchaseUpdated = useCallback(async (purchase: Purchase) => {
+    const { productId } = purchase;
+
+    try {
+      const validationResult = await validateReceipt({
+        receiptData: JSON.stringify(purchase),
+      });
+
+      const data = validationResult.data as any;
+
+      if (data.success) {
+        await AsyncStorage.setItem('hasActiveSubscription', 'true');
+        await finishTransaction({ purchase, isConsumable: false });
+        Alert.alert(
+          'Subscription Active!',
+          'Your subscription has been activated. You can now scan food!',
+          [{ text: 'Start Scanning', onPress: () => router.push('/scanner') }]
+        );
+      } else {
+        await finishTransaction({ purchase, isConsumable: false });
+        Alert.alert('Error', 'Subscription validation failed. Please try again.');
+      }
+    } catch (error) {
+      const planId = plans.find(p => p.productId === productId)?.id;
+      if (planId) {
+        await api.activateSubscription(planId);
+        await AsyncStorage.setItem('hasActiveSubscription', 'true');
+        await finishTransaction({ purchase, isConsumable: false });
+        Alert.alert(
+          'Subscription Active!',
+          'Your subscription has been activated. You can now scan food!',
+          [{ text: 'Start Scanning', onPress: () => router.push('/scanner') }]
+        );
+      }
+    }
+    setLoading(false);
+  }, []);
 
   const handleSelectPlan = async () => {
     if (!selectedPlan) {
@@ -125,40 +187,24 @@ export default function SubscriptionScreen() {
     }
 
     setLoading(true);
-    try {
-      const productId = PRODUCT_IDS[selectedPlan as keyof typeof PRODUCT_IDS];
-      await InAppPurchases.purchaseItemAsync(productId);
-    } catch (error) {
-      setLoading(false);
-      Alert.alert('Error', 'Payment could not be completed. Please try again.');
+    const plan = plans.find(p => p.id === selectedPlan);
+    if (plan) {
+      await handlePurchase(plan.productId);
     }
   };
 
   const handleRestorePurchases = async () => {
     setLoading(true);
     try {
-      await InAppPurchases.connectAsync();
-      const { responseCode, results } = await InAppPurchases.getPurchaseHistoryAsync();
-      if (responseCode === InAppPurchases.IAPResponseCode.OK && results) {
-        const validPurchase = results.find(
-          (p) => Object.values(PRODUCT_IDS).includes(p.productId)
+      const localSub = await AsyncStorage.getItem('hasActiveSubscription');
+      if (localSub === 'true') {
+        Alert.alert(
+          'Purchases Restored!',
+          'Your subscription has been restored.',
+          [{ text: 'Start Scanning', onPress: () => router.push('/scanner') }]
         );
-        if (validPurchase) {
-          const planId = Object.entries(PRODUCT_IDS).find(
-            ([, pid]) => pid === validPurchase.productId
-          )?.[0];
-          if (planId) {
-            await api.activateSubscription(planId);
-            await AsyncStorage.setItem('hasActiveSubscription', 'true');
-            Alert.alert(
-              'Purchases Restored!',
-              'Your subscription has been restored.',
-              [{ text: 'Start Scanning', onPress: () => router.push('/scanner') }]
-            );
-          }
-        } else {
-          Alert.alert('No Purchases Found', 'No previous purchases were found to restore.');
-        }
+      } else {
+        Alert.alert('No Purchases Found', 'No previous purchases were found to restore.');
       }
     } catch (error) {
       Alert.alert('Error', 'Could not restore purchases.');
@@ -195,7 +241,7 @@ export default function SubscriptionScreen() {
               </View>
             </View>
 
-            <Text style={styles.planPrice}>{prices[plan.id] || plan.fallbackPrice}</Text>
+            <Text style={styles.planPrice}>{prices[plan.productId] || plan.fallbackPrice}</Text>
             <Text style={styles.planPeriod}>{plan.period}</Text>
 
             <View style={styles.features}>
@@ -227,7 +273,7 @@ export default function SubscriptionScreen() {
             <ActivityIndicator color={Colors.black} />
           ) : (
             <Text style={styles.subscribeButtonText}>
-              {selectedPlan ? `Subscribe for ${prices[selectedPlan] || plans.find(p => p.id === selectedPlan)?.fallbackPrice}` : 'Select a Plan'}
+              {selectedPlan ? `Subscribe for ${prices[plans.find(p => p.id === selectedPlan)?.productId || ''] || plans.find(p => p.id === selectedPlan)?.fallbackPrice}` : 'Select a Plan'}
             </Text>
           )}
         </TouchableOpacity>

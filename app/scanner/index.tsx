@@ -10,14 +10,16 @@ import {
   Alert,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, FontSize, Spacing } from '../../src/constants/theme';
 import { api } from '../../src/services/api';
-import { getRandomFood, getFoodByImageHash } from '../../src/data/foodDatabase';
-import KidneyDiagram from '../../src/components/KidneyDiagram';
+import { searchFood } from '../../src/data/foodDatabase';
+import { recognizeFood, setApiKey, isApiConfigured } from '../../src/services/foodRecognition';
+import { searchUsdaFood, setUsdaApiKey, getUsdaApiKey } from '../../src/services/usda';
 import ScanResult3D from '../../src/components/ScanResult3D';
 
 export default function ScannerScreen() {
@@ -27,6 +29,10 @@ export default function ScannerScreen() {
   const [hasSubscription, setHasSubscription] = useState<boolean | null>(null);
   const [todayLog, setTodayLog] = useState({ totalCalories: 0, totalProtein: 0, totalFat: 0, totalCarbs: 0 });
   const [goals, setGoals] = useState({ calories: 2000, protein: 50, fat: 65, carbs: 300 });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [showSearch, setShowSearch] = useState(false);
+  const [apiConfigured, setApiConfigured] = useState(false);
   const cameraRef = useRef<any>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const scrollRef = useRef<ScrollView>(null);
@@ -36,14 +42,18 @@ export default function ScannerScreen() {
     checkSubscription();
     loadGoals();
     loadTodayLog();
+    loadApiKey();
 
-    Animated.loop(
+    const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, { toValue: 1.1, duration: 1000, useNativeDriver: true }),
         Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
       ])
-    ).start();
-  }, [permission]);
+    );
+    animation.start();
+
+    return () => animation.stop();
+  }, []);
 
   useEffect(() => {
     if (result && scrollRef.current) {
@@ -102,57 +112,101 @@ export default function ScannerScreen() {
     } catch (error) {}
   };
 
-  const IMAGE_CACHE_KEY = 'scalai_image_cache';
-
-  const getImageCache = async (): Promise<Record<string, any>> => {
+  const loadApiKey = async () => {
     try {
-      const raw = await AsyncStorage.getItem(IMAGE_CACHE_KEY);
-      return raw ? JSON.parse(raw) : {};
-    } catch { return {}; }
+      const key = process.env.EXPO_PUBLIC_GOOGLE_VISION_API_KEY || '';
+      if (key) {
+        setApiKey(key);
+        setApiConfigured(true);
+      }
+      const usdaKey = process.env.EXPO_PUBLIC_USDA_API_KEY || '';
+      if (usdaKey) {
+        setUsdaApiKey(usdaKey);
+      }
+    } catch (error) {}
   };
 
-  const saveImageCache = async (cache: Record<string, any>) => {
-    await AsyncStorage.setItem(IMAGE_CACHE_KEY, JSON.stringify(cache));
-  };
-
-  const simpleHash = (str: string): string => {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    if (query.length >= 2) {
+      const results = searchFood(query);
+      if (results.length > 0) {
+        setSearchResults(results);
+      } else {
+        const usdaResult = await searchUsdaFood(query);
+        if (usdaResult) {
+          setSearchResults([usdaResult]);
+        } else {
+          setSearchResults([]);
+        }
+      }
+    } else {
+      setSearchResults([]);
     }
-    return Math.abs(hash).toString(36);
+  };
+
+  const selectSearchResult = async (food: any) => {
+    setResult(food);
+    setShowSearch(false);
+    setSearchQuery('');
+    setSearchResults([]);
+    await autoSaveToHistory(food);
+    await loadTodayLog();
+    scheduleLocalNotification('Food Logged!', `${food.calories} kcal - ${food.name}`, { calories: food.calories });
   };
 
   const simulateScan = async (imageBase64?: string) => {
     setScanning(true);
     setResult(null);
 
-    let food: any;
+    if (imageBase64 && isApiConfigured()) {
+      const apiResult = await recognizeFood(imageBase64);
 
-    if (imageBase64) {
-      const hash = simpleHash(imageBase64);
-      const cache = await getImageCache();
-
-      if (cache[hash]) {
-        food = cache[hash];
-      } else {
-        food = getFoodByImageHash(imageBase64);
-        cache[hash] = food;
-        await saveImageCache(cache);
+      if (apiResult.success && apiResult.food) {
+        let food = apiResult.food;
+        const usdaData = await searchUsdaFood(food.name);
+        if (usdaData && usdaData.calories > 0) {
+          food = usdaData;
+        }
+        setResult(food);
+        setScanning(false);
+        await autoSaveToHistory(food);
+        await loadTodayLog();
+        scheduleLocalNotification('Scan Complete!', `${food.calories} kcal detected`, { calories: food.calories });
+        return;
       }
-    } else {
-      food = getRandomFood();
+
+      Alert.alert(
+        'Could not identify food',
+        apiResult.error || 'Please try a clearer photo or search manually.',
+        [
+          { text: 'Search Manually', onPress: () => setShowSearch(true) },
+          { text: 'Try Again', onPress: () => setScanning(false) },
+        ]
+      );
+      setScanning(false);
+      return;
     }
 
-    setTimeout(async () => {
-      setResult(food);
+    if (imageBase64 && !isApiConfigured()) {
+      Alert.alert(
+        'AI Scanning Not Available',
+        'Google Vision API key not configured. Please search manually or set up an API key in Settings.',
+        [
+          { text: 'Search Manually', onPress: () => setShowSearch(true) },
+          { text: 'Cancel', onPress: () => setScanning(false) },
+        ]
+      );
       setScanning(false);
-      await autoSaveToHistory(food);
-      await loadTodayLog();
-      scheduleLocalNotification('Scan Complete!', `${food.calories} kcal detected`, { calories: food.calories });
-    }, 2000);
+      return;
+    }
+
+    Alert.alert(
+      'No Image',
+      'Please take a photo or upload an image to scan.',
+      [{ text: 'OK', onPress: () => setScanning(false) }]
+    );
+    setScanning(false);
   };
 
   const autoSaveToHistory = async (food: any) => {
@@ -167,7 +221,11 @@ export default function ScannerScreen() {
     if (cameraRef.current) {
       try {
         const photo = await cameraRef.current.takePictureAsync({ quality: 0.5, base64: true });
-        simulateScan(photo.base64);
+        if (photo && photo.base64) {
+          simulateScan(photo.base64);
+        } else {
+          Alert.alert('Error', 'Failed to capture image');
+        }
       } catch (error) {
         Alert.alert('Error', 'Failed to take picture');
       }
@@ -276,17 +334,53 @@ export default function ScannerScreen() {
           </View>
         )}
 
-        {!result && !scanning && (
+        {!result && !scanning && !showSearch && (
           <View style={styles.controls}>
             <TouchableOpacity style={styles.captureButton} onPress={takePicture}><View style={styles.captureButtonInner} /></TouchableOpacity>
-            <TouchableOpacity style={styles.uploadButton} onPress={pickImage}><Text style={styles.uploadText}>📁 Upload Image</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.uploadButton} onPress={pickImage}><Text style={styles.uploadText}>Upload Image</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.searchButton} onPress={() => setShowSearch(true)}>
+              <Text style={styles.searchButtonText}>Search Food Manually</Text>
+            </TouchableOpacity>
+            {!apiConfigured && (
+              <Text style={styles.apiWarning}>AI scanning requires a Google Vision API key</Text>
+            )}
+          </View>
+        )}
+
+        {showSearch && !result && (
+          <View style={styles.searchContainer}>
+            <Text style={styles.searchTitle}>Search Food</Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Type food name (e.g., apple, chicken, rice)"
+              placeholderTextColor={Colors.grayLight}
+              value={searchQuery}
+              onChangeText={handleSearch}
+              autoFocus
+            />
+            {searchResults.length > 0 && (
+              <View style={styles.searchResults}>
+                {searchResults.map((food, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.searchResultItem}
+                    onPress={() => selectSearchResult(food)}
+                  >
+                    <Text style={styles.searchResultName}>{food.name}</Text>
+                    <Text style={styles.searchResultCalories}>{food.calories} kcal</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+            <TouchableOpacity style={styles.cancelSearchButton} onPress={() => { setShowSearch(false); setSearchQuery(''); setSearchResults([]); }}>
+              <Text style={styles.cancelSearchText}>Cancel</Text>
+            </TouchableOpacity>
           </View>
         )}
 
         {result && (
           <View style={styles.resultContainer}>
             <ScanResult3D food={result} />
-            <KidneyDiagram impact={result.kidneyImpact} tip={result.kidneyTip} />
             <TouchableOpacity style={styles.retakeButton} onPress={retake}>
               <Text style={styles.retakeText}>Scan Again</Text>
             </TouchableOpacity>
@@ -427,6 +521,69 @@ const styles = StyleSheet.create({
   },
   uploadText: {
     color: Colors.gold,
+    fontSize: FontSize.medium,
+  },
+  searchButton: {
+    padding: Spacing.md,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    width: '100%',
+    alignItems: 'center',
+  },
+  searchButtonText: {
+    color: Colors.white,
+    fontSize: FontSize.medium,
+  },
+  apiWarning: {
+    color: '#ff9800',
+    fontSize: FontSize.small,
+    textAlign: 'center',
+    marginTop: Spacing.sm,
+  },
+  searchContainer: {
+    padding: Spacing.xl,
+    gap: Spacing.md,
+  },
+  searchTitle: {
+    color: Colors.white,
+    fontSize: FontSize.large,
+    fontWeight: 'bold',
+    marginBottom: Spacing.sm,
+  },
+  searchInput: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    padding: Spacing.md,
+    color: Colors.white,
+    fontSize: FontSize.medium,
+  },
+  searchResults: {
+    maxHeight: 300,
+    gap: Spacing.xs,
+  },
+  searchResultItem: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 8,
+    padding: Spacing.md,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  searchResultName: {
+    color: Colors.white,
+    fontSize: FontSize.medium,
+    textTransform: 'capitalize',
+  },
+  searchResultCalories: {
+    color: Colors.gold,
+    fontSize: FontSize.small,
+  },
+  cancelSearchButton: {
+    padding: Spacing.md,
+    alignItems: 'center',
+  },
+  cancelSearchText: {
+    color: Colors.grayLight,
     fontSize: FontSize.medium,
   },
   resultContainer: {

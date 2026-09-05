@@ -1,18 +1,31 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAdv7mIs-NaPG9jIAWIPRnrbdxkmqhmefs",
-  authDomain: "scal-ai-4910c.firebaseapp.com",
-  projectId: "scal-ai-4910c",
-  storageBucket: "scal-ai-4910c.firebasestorage.app",
-  messagingSenderId: "523362998451",
-  appId: "1:523362998451:web:d426b82d9e859c8d7338c6"
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+let app: any;
+let auth: any;
+let db: any;
+
+try {
+  const apps = getApps();
+  if (apps.length === 0) {
+    app = initializeApp(firebaseConfig);
+  } else {
+    app = apps[0];
+  }
+  auth = getAuth(app);
+  db = getFirestore(app);
+} catch (error) {
+  // Firebase initialization error
+}
 
 export { app, auth, db };

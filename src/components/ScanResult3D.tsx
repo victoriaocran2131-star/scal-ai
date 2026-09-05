@@ -71,26 +71,6 @@ export default function ScanResult3D({ food }: Props) {
   const rotate = rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ['90deg', '0deg'] });
   const shimmerOpacity = shimmerAnim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 0.8] });
 
-  const getImpactColor = () => {
-    if (food.kidneyImpact === 'positive') return { primary: '#00C853', bg: '#E8F5E9' };
-    if (food.kidneyImpact === 'negative') return { primary: '#FF1744', bg: '#FFEBEE' };
-    return { primary: '#FF9100', bg: '#FFF3E0' };
-  };
-
-  const impactColor = getImpactColor();
-
-  const getImpactEmoji = () => {
-    if (food.kidneyImpact === 'positive') return '✅';
-    if (food.kidneyImpact === 'negative') return '⚠️';
-    return 'ℹ️';
-  };
-
-  const getImpactLabel = () => {
-    if (food.kidneyImpact === 'positive') return 'Kidney Friendly';
-    if (food.kidneyImpact === 'negative') return 'Kidney Risk';
-    return 'Moderate';
-  };
-
   return (
     <Animated.View style={[styles.container, { transform: [{ scale: scaleAnim }, { rotateX: rotate }] }]}>
       <LinearGradient colors={['#1a1a2e', '#16213e', '#0f3460']} style={styles.card} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
@@ -100,11 +80,7 @@ export default function ScanResult3D({ food }: Props) {
 
         <View style={styles.header}>
           <View style={styles.foodNameContainer}>
-            <View style={[styles.impactBadge, { backgroundColor: impactColor.bg }]}>
-              <Text style={[styles.impactText, { color: impactColor.primary }]}>
-                {getImpactEmoji()} {getImpactLabel()}
-              </Text>
-            </View>
+            <Text style={styles.foodName}>{food.name}</Text>
           </View>
           <View style={styles.caloriesContainer}>
             <Text style={styles.caloriesNumber}>{food.calories}</Text>
@@ -135,16 +111,15 @@ export default function ScanResult3D({ food }: Props) {
 
         <View style={styles.divider} />
 
-        <View style={styles.kidneySection}>
-          <Text style={styles.sectionTitle}>Kidney Impact</Text>
-          <Text style={[styles.kidneyImpact, { color: impactColor.primary }]}>{stripFoodName(food.kidneyTip, food.name)}</Text>
-        </View>
-
-        <View style={styles.divider} />
-
         <View style={styles.factSection}>
           <Text style={styles.sectionTitle}>Did You Know?</Text>
           <Text style={styles.factText}>{stripFoodName(food.fact, food.name)}</Text>
+        </View>
+
+        <View style={styles.disclaimerContainer}>
+          <Text style={styles.disclaimerText}>
+            This information is for educational purposes only and is not medical advice. Consult a healthcare professional for dietary guidance.
+          </Text>
         </View>
       </LinearGradient>
     </Animated.View>
@@ -158,8 +133,7 @@ const styles = StyleSheet.create({
   shimmer: { flex: 1, backgroundColor: 'rgba(255,255,255,0.1)' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   foodNameContainer: { flex: 1 },
-  impactBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, marginTop: 8 },
-  impactText: { fontSize: 13, fontWeight: '700' },
+  foodName: { fontSize: 22, fontWeight: 'bold', color: '#fff', textTransform: 'capitalize' },
   caloriesContainer: { alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 16, padding: 12, minWidth: 80 },
   caloriesNumber: { fontSize: 32, fontWeight: 'bold', color: '#FFD93D' },
   caloriesLabel: { fontSize: 12, color: 'rgba(255,255,255,0.7)' },
@@ -175,8 +149,8 @@ const styles = StyleSheet.create({
   digestBadge: { backgroundColor: 'rgba(78, 205, 196, 0.2)', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12, alignSelf: 'flex-start', marginBottom: 6 },
   digestTime: { fontSize: 16, fontWeight: '700', color: '#4ECDC4' },
   digestDesc: { fontSize: 13, color: 'rgba(255,255,255,0.7)' },
-  kidneySection: { marginBottom: 4 },
-  kidneyImpact: { fontSize: 14, lineHeight: 22, fontWeight: '500' },
   factSection: { marginBottom: 4 },
   factText: { fontSize: 14, color: 'rgba(255,255,255,0.85)', lineHeight: 22, fontStyle: 'italic' },
+  disclaimerContainer: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)' },
+  disclaimerText: { fontSize: 11, color: 'rgba(255,255,255,0.5)', lineHeight: 16, fontStyle: 'italic' },
 });

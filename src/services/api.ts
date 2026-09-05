@@ -22,7 +22,7 @@ import {
   orderBy,
   Timestamp,
 } from 'firebase/firestore';
-import { isAdmin } from '../constants/admin';
+
 
 interface ApiResponse<T = any> {
   success?: boolean;
@@ -101,10 +101,6 @@ class ApiService {
         email,
       }));
 
-      if (isAdmin(email)) {
-        await AsyncStorage.setItem('isAdmin', 'true');
-      }
-
       return { success: true, user: { uid: user.uid, fullName: userData?.fullName, email } };
     } catch (error: any) {
       const message = error.code === 'auth/user-not-found'
@@ -141,10 +137,6 @@ class ApiService {
         photoURL: user.photoURL || null,
       }));
 
-      if (user.email && isAdmin(user.email)) {
-        await AsyncStorage.setItem('isAdmin', 'true');
-      }
-
       return { success: true, user: { uid: user.uid, fullName: user.displayName, email: user.email }, isNewUser };
     } catch (error: any) {
       return { error: error.message || 'Failed to sign in with Google' };
@@ -156,7 +148,6 @@ class ApiService {
     await AsyncStorage.removeItem('scalai_user');
     await AsyncStorage.removeItem('hasActiveSubscription');
     await AsyncStorage.removeItem('subscriptionInfo');
-    await AsyncStorage.removeItem('isAdmin');
   }
 
   async getProfile(): Promise<ApiResponse> {
@@ -374,18 +365,6 @@ class ApiService {
       const uid = this.getUserId();
       if (!uid) {
         return { hasActiveSubscription: false };
-      }
-
-      const userDoc = await getDoc(doc(db, 'users', uid));
-      const userData = userDoc.data();
-      const authEmail = auth.currentUser?.email || '';
-      const storedEmail = userData?.email || '';
-      if (isAdmin(authEmail) || isAdmin(storedEmail)) {
-        return {
-          success: true,
-          hasActiveSubscription: true,
-          subscription: { plan: 'admin', daysRemaining: 36500 },
-        };
       }
 
       const subDoc = await getDoc(doc(db, 'users', uid, 'subscription', 'current'));
