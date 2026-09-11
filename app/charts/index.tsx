@@ -35,9 +35,13 @@ export default function ChartsScreen() {
       const result = await api.getDailyLogs(period);
       if (result.success && result.logs) {
         setDailyLogs(fillMissingDays(result.logs));
+      } else if (result.error) {
+        console.error('Charts error:', result.error);
+        setDailyLogs([]);
       }
     } catch (err) {
       console.error('Failed to load chart data:', err);
+      setDailyLogs([]);
     }
   };
 

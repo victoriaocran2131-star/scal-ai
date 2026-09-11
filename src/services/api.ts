@@ -194,6 +194,7 @@ class ApiService {
   // ==================== HISTORY (FIRESTORE) ====================
 
   async addHistory(item: {
+    name: string;
     calories: number;
     protein: number;
     fat: number;
@@ -208,18 +209,19 @@ class ApiService {
         return { error: 'Not authenticated' };
       }
       await addDoc(historyRef, {
-        calories: item.calories,
-        protein: item.protein,
-        fat: item.fat,
+        name: item.name || 'Unknown Food',
+        calories: item.calories || 0,
+        protein: item.protein || 0,
+        fat: item.fat || 0,
         carbs: item.carbs || 0,
         fiber: item.fiber || 0,
         sugar: item.sugar || 0,
-        digestion: item.digestion,
+        digestion: item.digestion || '',
         createdAt: new Date().toISOString(),
       });
       return { success: true };
     } catch (error: any) {
-      return { error: 'Failed to save history' };
+      return { error: 'Failed to save history: ' + (error.message || 'Unknown error') };
     }
   }
 
@@ -240,15 +242,27 @@ class ApiService {
         items = items.filter((h: any) => h.createdAt?.split('T')[0] === today);
       } else if (filter === 'week') {
         const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        items = items.filter((h: any) => new Date(h.createdAt) >= weekAgo);
+        items = items.filter((h: any) => {
+          try {
+            return new Date(h.createdAt) >= weekAgo;
+          } catch {
+            return false;
+          }
+        });
       } else if (filter === 'month') {
         const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        items = items.filter((h: any) => new Date(h.createdAt) >= monthAgo);
+        items = items.filter((h: any) => {
+          try {
+            return new Date(h.createdAt) >= monthAgo;
+          } catch {
+            return false;
+          }
+        });
       }
 
       return { success: true, history: items };
     } catch (error: any) {
-      return { error: 'Failed to load history' };
+      return { error: 'Failed to load history: ' + (error.message || 'Unknown error') };
     }
   }
 
@@ -333,7 +347,7 @@ class ApiService {
 
       return { success: true, log };
     } catch (error: any) {
-      return { log: { totalCalories: 0, totalProtein: 0, totalFat: 0, totalCarbs: 0, mealCount: 0 } };
+      return { success: false, log: { totalCalories: 0, totalProtein: 0, totalFat: 0, totalCarbs: 0, totalFiber: 0, totalSugar: 0, mealCount: 0 } };
     }
   }
 
@@ -348,7 +362,13 @@ class ApiService {
         const date = new Date(now);
         date.setDate(date.getDate() - i);
         const dateStr = date.toISOString().split('T')[0];
-        const dayItems = items.filter((h: any) => h.createdAt?.split('T')[0] === dateStr);
+        const dayItems = items.filter((h: any) => {
+          try {
+            return h.createdAt?.split('T')[0] === dateStr;
+          } catch {
+            return false;
+          }
+        });
 
         logs.push({
           date: dateStr,
@@ -364,7 +384,7 @@ class ApiService {
 
       return { success: true, logs };
     } catch (error: any) {
-      return { error: 'Failed to load daily logs' };
+      return { error: 'Failed to load daily logs: ' + (error.message || 'Unknown error') };
     }
   }
 

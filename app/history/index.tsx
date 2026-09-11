@@ -15,6 +15,7 @@ import { api } from '../../src/services/api';
 
 interface HistoryItem {
   id: string;
+  name: string;
   calories: number;
   protein: number;
   fat: number;
@@ -38,9 +39,13 @@ export default function HistoryScreen() {
       const result = await api.getHistory(filter);
       if (result.success) {
         setHistory(result.history || []);
+      } else if (result.error) {
+        console.error('History error:', result.error);
+        setHistory([]);
       }
     } catch (err) {
       console.error('Failed to load history:', err);
+      setHistory([]);
     }
     setLoading(false);
   };
@@ -91,23 +96,24 @@ export default function HistoryScreen() {
   const renderItem = ({ item }: { item: HistoryItem }) => (
     <View style={styles.historyItem}>
       <View style={styles.itemHeader}>
+        <Text style={styles.itemName}>{item.name || 'Unknown Food'}</Text>
         <Text style={styles.itemDate}>{formatDate(item.createdAt)}</Text>
       </View>
       <View style={styles.itemStats}>
         <View style={styles.statBox}>
-          <Text style={styles.statValue}>{item.calories}</Text>
+          <Text style={styles.statValue}>{item.calories || 0}</Text>
           <Text style={styles.statLabel}>kcal</Text>
         </View>
         <View style={styles.statBox}>
-          <Text style={styles.statValue}>{item.protein}g</Text>
+          <Text style={styles.statValue}>{item.protein || 0}g</Text>
           <Text style={styles.statLabel}>protein</Text>
         </View>
         <View style={styles.statBox}>
-          <Text style={styles.statValue}>{item.fat}g</Text>
+          <Text style={styles.statValue}>{item.fat || 0}g</Text>
           <Text style={styles.statLabel}>fat</Text>
         </View>
         <View style={styles.statBox}>
-          <Text style={styles.statValue}>{item.carbs}g</Text>
+          <Text style={styles.statValue}>{item.carbs || 0}g</Text>
           <Text style={styles.statLabel}>carbs</Text>
         </View>
       </View>
@@ -221,6 +227,13 @@ const styles = StyleSheet.create({
   },
   itemHeader: {
     marginBottom: Spacing.sm,
+  },
+  itemName: {
+    color: Colors.white,
+    fontSize: FontSize.medium,
+    fontWeight: 'bold',
+    textTransform: 'capitalize',
+    marginBottom: 4,
   },
   itemDate: {
     color: Colors.gray,

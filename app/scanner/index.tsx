@@ -213,9 +213,21 @@ export default function ScannerScreen() {
 
   const autoSaveToHistory = async (food: any) => {
     try {
-      await api.addHistory({ calories: food.calories, protein: food.protein, fat: food.fat, carbs: food.carbs, fiber: food.fiber, sugar: food.sugar, digestion: food.digestion });
+      const result = await api.addHistory({ 
+        name: food.name || 'Unknown Food',
+        calories: food.calories || 0, 
+        protein: food.protein || 0, 
+        fat: food.fat || 0, 
+        carbs: food.carbs || 0, 
+        fiber: food.fiber || 0, 
+        sugar: food.sugar || 0, 
+        digestion: food.digestion || '' 
+      });
+      if (result.error) {
+        console.error('Failed to save history:', result.error);
+      }
     } catch (e) {
-      // Silently fail
+      console.error('Failed to save history:', e);
     }
   };
 
