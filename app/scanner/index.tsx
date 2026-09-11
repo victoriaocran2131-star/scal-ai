@@ -3,6 +3,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useRef, useState } from 'react';
 import { Keyboard, ScrollView, Animated } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { scheduleLocalNotification } from '../../src/services/notifications';
 import {
   ActivityIndicator,
@@ -25,6 +26,7 @@ export default function ScannerScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [hasSubscription, setHasSubscription] = useState<boolean | null>(null);
   const [todayLog, setTodayLog] = useState({ totalCalories: 0, totalProtein: 0, totalFat: 0, totalCarbs: 0 });
   const [goals, setGoals] = useState({ calories: 2000, protein: 50, fat: 65, carbs: 300 });
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,6 +39,7 @@ export default function ScannerScreen() {
 
   useEffect(() => {
     Keyboard.dismiss();
+    checkSubscription();
     loadGoals();
     loadTodayLog();
     loadApiKey();
@@ -60,6 +63,41 @@ export default function ScannerScreen() {
     }
   }, [result]);
 
+  const checkSubscription = async () => {
+    try {
+      const result = await api.checkSubscription();
+      const res = result as any;
+      if (res.hasActiveSubscription) {
+        setHasSubscription(true);
+        await AsyncStorage.setItem('hasActiveSubscription', 'true');
+        if (res.subscription?.daysRemaining <= 2) {
+          Alert.alert(
+            'Subscription Expiring',
+            `Your ${res.subscription.plan} plan expires in ${res.subscription.daysRemaining} day(s). Renew to keep scanning.`,
+            [
+              { text: 'Renew Now', onPress: () => router.push('/subscription') },
+              { text: 'Later' },
+            ]
+          );
+        }
+      } else {
+        setHasSubscription(false);
+        await AsyncStorage.removeItem('hasActiveSubscription');
+        Alert.alert('Subscription Required', 'You need an active subscription to scan food.', [
+          { text: 'Subscribe', onPress: () => router.push('/subscription') },
+        ]);
+      }
+    } catch (error) {
+      const localSub = await AsyncStorage.getItem('hasActiveSubscription');
+      if (localSub === 'true') {
+        setHasSubscription(true);
+      } else {
+        setHasSubscription(false);
+        router.push('/subscription');
+      }
+    }
+  };
+
   const loadGoals = async () => {
     try {
       const data = await api.getGoals();
@@ -77,9 +115,11 @@ export default function ScannerScreen() {
   const loadApiKey = async () => {
     try {
       const key = process.env.EXPO_PUBLIC_GOOGLE_VISION_API_KEY || '';
-      if (key) {
+      if (key && key.length >= 20) {
         setApiKey(key);
         setApiConfigured(true);
+      } else if (key) {
+        Alert.alert('Invalid API Key', 'The Google Vision API key appears to be invalid. AI scanning may not work.');
       }
       const usdaKey = process.env.EXPO_PUBLIC_USDA_API_KEY || '';
       if (usdaKey) {
@@ -209,7 +249,19 @@ export default function ScannerScreen() {
   const getProgressColor = (p: number) => { if (p < 0.5) return '#4CAF50'; if (p < 0.8) return Colors.gold; return '#f44336'; };
 
   if (!permission) {
-    return (<View style={styles.centered}><ActivityIndicator size="large" color={Colors.gold} /><Text style={styles.loadingText}>Loading...</Text></View>);
+    return (<View style={styles.centered}><ActivityIndicator size="large" color={Colors.gold} /><Text style={styles.loadingText}>Checking subscription...</Text></View>);
+  }
+
+  if (hasSubscription === false) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.permissionContainer}>
+          <Text style={styles.permissionTitle}>Subscription Required</Text>
+          <Text style={styles.permissionText}>You need an active subscription to use Scal AI. Subscribe to start scanning food and tracking nutrition.</Text>
+          <TouchableOpacity style={styles.button} onPress={() => router.push('/subscription')}><Text style={styles.buttonText}>Subscribe Now</Text></TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   if (!permission.granted) {

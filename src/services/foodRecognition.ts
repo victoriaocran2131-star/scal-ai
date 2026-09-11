@@ -159,7 +159,14 @@ export async function recognizeFood(base64Image: string): Promise<{
   if (!API_KEY) {
     return {
       success: false,
-      error: 'API key not configured. Please set your Google Cloud Vision API key.',
+      error: 'API key not configured. Please set your Google Cloud Vision API key in Settings.',
+    };
+  }
+
+  if (API_KEY.length < 20) {
+    return {
+      success: false,
+      error: 'Invalid API key format. Please check your Google Cloud Vision API key.',
     };
   }
 
@@ -194,9 +201,18 @@ export async function recognizeFood(base64Image: string): Promise<{
 
     if (!response.ok) {
       const errorData = await response.json();
+      const errorMsg = errorData.error?.message || `API error: ${response.status}`;
+      
+      if (errorMsg.includes('API key not valid') || errorMsg.includes('invalid')) {
+        return {
+          success: false,
+          error: 'Your API key is invalid. Please get a new key from Google Cloud Console:\nhttps://console.cloud.google.com/apis/credentials',
+        };
+      }
+      
       return {
         success: false,
-        error: errorData.error?.message || `API error: ${response.status}`,
+        error: errorMsg,
       };
     }
 
