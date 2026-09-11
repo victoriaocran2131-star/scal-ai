@@ -50,7 +50,7 @@ const plans = [
     fallbackPrice: '$1.99',
     period: 'per week',
     badge: 'Pay Weekly',
-    features: ['Food Scanning', 'Nutrition Tracking', 'Scan History', 'Daily Goals', 'Charts & Analytics'],
+    features: ['AI Food Scanning', 'Nutrition Tracking', 'Scan History', 'Daily Goals', 'Charts & Analytics', 'Meal Reminders'],
     popular: false,
   },
   {
@@ -60,7 +60,7 @@ const plans = [
     fallbackPrice: '$7.99',
     period: 'per month',
     badge: 'Most Popular',
-    features: ['Food Scanning', 'Nutrition Tracking', 'Scan History', 'Daily Goals', 'Charts & Analytics', 'Meal Reminders'],
+    features: ['AI Food Scanning', 'Nutrition Tracking', 'Scan History', 'Daily Goals', 'Charts & Analytics', 'Meal Reminders'],
     popular: true,
   },
   {
@@ -70,7 +70,7 @@ const plans = [
     fallbackPrice: '$49.99',
     period: 'per year',
     badge: 'Save 60%',
-    features: ['Food Scanning', 'Nutrition Tracking', 'Scan History', 'Daily Goals', 'Charts & Analytics', 'Meal Reminders', 'Best Value'],
+    features: ['AI Food Scanning', 'Nutrition Tracking', 'Scan History', 'Daily Goals', 'Charts & Analytics', 'Meal Reminders'],
     popular: false,
   },
 ];
