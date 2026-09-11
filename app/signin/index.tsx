@@ -26,13 +26,18 @@ export default function SignInScreen() {
     }
 
     setLoading(true);
-    const result = await api.signin(email, password);
-    setLoading(false);
+    try {
+      const result = await api.signin(email, password);
+      setLoading(false);
 
-    if (result.success) {
-      router.push('/scanner');
-    } else {
-      Alert.alert('Error', result.error || 'Failed to sign in');
+      if (result.success) {
+        router.push('/scanner');
+      } else {
+        Alert.alert('Error', result.error || 'Failed to sign in');
+      }
+    } catch (error) {
+      setLoading(false);
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
     }
   };
 

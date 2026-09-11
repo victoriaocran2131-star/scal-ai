@@ -121,10 +121,6 @@ class SecurityService {
 
   async checkAppIntegrity(): Promise<boolean> {
     try {
-      const buildTime = await AsyncStorage.getItem('buildTime');
-      if (buildTime && buildTime !== '1.0.28') {
-        return false;
-      }
       return true;
     } catch {
       return true;
@@ -134,8 +130,16 @@ class SecurityService {
   generateToken(): string {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let token = '';
+    const randomValues = new Uint32Array(32);
+    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+      crypto.getRandomValues(randomValues);
+    } else {
+      for (let i = 0; i < 32; i++) {
+        randomValues[i] = Math.floor(Math.random() * 4294967296);
+      }
+    }
     for (let i = 0; i < 32; i++) {
-      token += chars.charAt(Math.floor(Math.random() * chars.length));
+      token += chars.charAt(randomValues[i] % chars.length);
     }
     return token;
   }

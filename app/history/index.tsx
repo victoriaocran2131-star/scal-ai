@@ -63,13 +63,29 @@ export default function HistoryScreen() {
   }, [filter]);
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    try {
+      let date: Date;
+      if (dateString && typeof dateString === 'object' && 'toDate' in dateString) {
+        date = (dateString as any).toDate();
+      } else if (dateString) {
+        date = new Date(dateString);
+      } else {
+        date = new Date();
+      }
+      
+      if (isNaN(date.getTime())) {
+        return 'Unknown date';
+      }
+      
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return 'Unknown date';
+    }
   };
 
   const renderItem = ({ item }: { item: HistoryItem }) => (

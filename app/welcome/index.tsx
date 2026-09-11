@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, FontSize, Spacing } from '../../src/constants/theme';
 
@@ -36,10 +37,9 @@ export default function WelcomeScreen() {
   }, []);
 
   return (
-    <ImageBackground
-      source={{ uri: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200' }}
+    <LinearGradient
+      colors={['#1a1a2e', '#16213e', '#0f3460']}
       style={styles.background}
-      blurRadius={5}
     >
       <View style={styles.overlay} />
       <SafeAreaView style={styles.container}>
@@ -74,7 +74,7 @@ export default function WelcomeScreen() {
           <Text style={styles.founder}>Founded by Samuel Amankwah Arhin</Text>
         </View>
       </SafeAreaView>
-    </ImageBackground>
+    </LinearGradient>
   );
 }
 
@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
   container: {
     flex: 1,

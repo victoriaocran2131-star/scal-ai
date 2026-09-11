@@ -6,14 +6,18 @@ import { registerForPushNotificationsAsync, addNotificationListeners } from '../
 
 export default function RootLayout() {
   useEffect(() => {
-    registerForPushNotificationsAsync();
+    try {
+      registerForPushNotificationsAsync().catch(() => {});
 
-    const removeListeners = addNotificationListeners(
-      () => {},
-      () => {}
-    );
+      const removeListeners = addNotificationListeners(
+        () => {},
+        () => {}
+      );
 
-    return () => removeListeners();
+      return () => removeListeners();
+    } catch (error) {
+      // Notification setup failed, app should still work
+    }
   }, []);
 
   return (

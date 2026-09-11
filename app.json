@@ -19,7 +19,7 @@
         ],
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "13",
+      "buildNumber": "22",
       "ageRating": {
         "mature": 0,
         "violenceCartoonFantasy": 0,
@@ -66,8 +66,7 @@
         }
       ],
       "expo-splash-screen",
-      "expo-web-browser",
-      "expo-in-app-purchases"
+      "expo-web-browser"
     ],
     "owner": "sam-inventons",
     "extra": {

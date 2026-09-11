@@ -13,36 +13,40 @@ Notifications.setNotificationHandler({
 });
 
 export async function registerForPushNotificationsAsync(): Promise<string | undefined> {
-  if (!Device.isDevice) {
-    return undefined;
-  }
+  try {
+    if (!Device.isDevice) {
+      return undefined;
+    }
 
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  let finalStatus = existingStatus;
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
 
-  if (existingStatus !== 'granted') {
-    const { status } = await Notifications.requestPermissionsAsync();
-    finalStatus = status;
-  }
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
 
-  if (finalStatus !== 'granted') {
-    return undefined;
-  }
+    if (finalStatus !== 'granted') {
+      return undefined;
+    }
 
-  const token = await Notifications.getExpoPushTokenAsync({
-    projectId: 'scal-ai',
-  });
-
-  if (Platform.OS === 'android') {
-    Notifications.setNotificationChannelAsync('default', {
-      name: 'default',
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#D4AF37',
+    const token = await Notifications.getExpoPushTokenAsync({
+      projectId: 'd5099959-6b92-40a4-a325-67d887360394',
     });
-  }
 
-  return token.data;
+    if (Platform.OS === 'android') {
+      Notifications.setNotificationChannelAsync('default', {
+        name: 'default',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#D4AF37',
+      });
+    }
+
+    return token.data;
+  } catch (error) {
+    return undefined;
+  }
 }
 
 export function addNotificationListeners(

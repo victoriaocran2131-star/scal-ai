@@ -44,29 +44,37 @@ class ApiService {
   private currentUser: any = null;
 
   constructor() {
-    onAuthStateChanged(auth, (user) => {
-      this.currentUser = user;
-    });
+    if (auth) {
+      onAuthStateChanged(auth, (user) => {
+        this.currentUser = user;
+      });
+    }
+  }
+
+  private isConfigured(): boolean {
+    return auth !== null && db !== null;
   }
 
   private getUserId(): string | null {
+    if (!auth) return null;
     return auth.currentUser?.uid || this.currentUser?.uid || null;
   }
 
   private getUserHistoryRef() {
     const uid = this.getUserId();
-    if (!uid) return null;
+    if (!uid || !db) return null;
     return collection(db, 'users', uid, 'history');
   }
 
   // ==================== AUTH ====================
 
   async signup(fullName: string, email: string, password: string): Promise<ApiResponse> {
+    if (!this.isConfigured()) return { error: 'Firebase is not configured. Please set up your .env file.' };
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth!, email, password);
       const user = userCredential.user;
 
-      await setDoc(doc(db, 'users', user.uid), {
+      await setDoc(doc(db!, 'users', user.uid), {
         fullName,
         email,
         createdAt: serverTimestamp(),
@@ -88,11 +96,12 @@ class ApiService {
   }
 
   async signin(email: string, password: string): Promise<ApiResponse> {
+    if (!this.isConfigured()) return { error: 'Firebase is not configured. Please set up your .env file.' };
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth!, email, password);
       const user = userCredential.user;
 
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const userDoc = await getDoc(doc(db!, 'users', user.uid));
       const userData = userDoc.data();
 
       await AsyncStorage.setItem('scalai_user', JSON.stringify({
@@ -113,16 +122,17 @@ class ApiService {
   }
 
   async googleSignIn(idToken: string): Promise<ApiResponse> {
+    if (!this.isConfigured()) return { error: 'Firebase is not configured. Please set up your .env file.' };
     try {
       const credential = GoogleAuthProvider.credential(idToken);
-      const userCredential = await signInWithCredential(auth, credential);
+      const userCredential = await signInWithCredential(auth!, credential);
       const user = userCredential.user;
 
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const userDoc = await getDoc(doc(db!, 'users', user.uid));
       const isNewUser = !userDoc.exists();
 
       if (isNewUser) {
-        await setDoc(doc(db, 'users', user.uid), {
+        await setDoc(doc(db!, 'users', user.uid), {
           fullName: user.displayName || '',
           email: user.email || '',
           photoURL: user.photoURL || null,
@@ -144,7 +154,7 @@ class ApiService {
   }
 
   async signOut(): Promise<void> {
-    await signOut(auth);
+    if (auth) await signOut(auth);
     await AsyncStorage.removeItem('scalai_user');
     await AsyncStorage.removeItem('hasActiveSubscription');
     await AsyncStorage.removeItem('subscriptionInfo');
@@ -153,7 +163,7 @@ class ApiService {
   async getProfile(): Promise<ApiResponse> {
     try {
       const uid = this.getUserId();
-      if (!uid) return { error: 'Not authenticated' };
+      if (!uid || !db) return { error: 'Not authenticated' };
 
       const userDoc = await getDoc(doc(db, 'users', uid));
       if (userDoc.exists()) {
@@ -168,7 +178,7 @@ class ApiService {
   async updateProfile(fullName: string): Promise<ApiResponse> {
     try {
       const uid = this.getUserId();
-      if (!uid) return { error: 'Not authenticated' };
+      if (!uid || !db) return { error: 'Not authenticated' };
 
       await setDoc(doc(db, 'users', uid), { fullName }, { merge: true });
 
@@ -216,7 +226,7 @@ class ApiService {
   async getHistory(filter: string = 'all'): Promise<ApiResponse> {
     try {
       const uid = this.getUserId();
-      if (!uid) return { success: true, history: [] };
+      if (!uid || !db) return { success: true, history: [] };
 
       const historyRef = collection(db, 'users', uid, 'history');
       const q = query(historyRef, orderBy('createdAt', 'desc'));
@@ -245,7 +255,7 @@ class ApiService {
   async deleteHistory(id: string): Promise<ApiResponse> {
     try {
       const uid = this.getUserId();
-      if (!uid) return { error: 'Not authenticated' };
+      if (!uid || !db) return { error: 'Not authenticated' };
 
       await deleteDoc(doc(db, 'users', uid, 'history', id));
       return { success: true };
@@ -257,7 +267,7 @@ class ApiService {
   async clearHistory(): Promise<ApiResponse> {
     try {
       const uid = this.getUserId();
-      if (!uid) return { error: 'Not authenticated' };
+      if (!uid || !db) return { error: 'Not authenticated' };
 
       const historyRef = collection(db, 'users', uid, 'history');
       const snapshot = await getDocs(historyRef);
@@ -363,7 +373,7 @@ class ApiService {
   async checkSubscription(): Promise<ApiResponse> {
     try {
       const uid = this.getUserId();
-      if (!uid) {
+      if (!uid || !db) {
         return { hasActiveSubscription: false };
       }
 
@@ -394,7 +404,7 @@ class ApiService {
   async activateSubscription(planId: string, paystackReference?: string): Promise<ApiResponse> {
     try {
       const uid = this.getUserId();
-      if (!uid) return { error: 'Not authenticated' };
+      if (!uid || !db) return { error: 'Not authenticated' };
 
       const now = new Date();
       let endDate = new Date(now);
@@ -436,7 +446,7 @@ class ApiService {
   async getGoals(): Promise<ApiResponse> {
     try {
       const uid = this.getUserId();
-      if (!uid) return { goals: { calories: 2000, protein: 50, fat: 65, carbs: 300 } };
+      if (!uid || !db) return { goals: { calories: 2000, protein: 50, fat: 65, carbs: 300 } };
 
       const goalsDoc = await getDoc(doc(db, 'users', uid, 'settings', 'goals'));
       if (goalsDoc.exists()) {
@@ -453,7 +463,7 @@ class ApiService {
   async deleteAccount(): Promise<ApiResponse> {
     try {
       const uid = this.getUserId();
-      if (!uid) return { error: 'Not authenticated' };
+      if (!uid || !db) return { error: 'Not authenticated' };
 
       const historyRef = collection(db, 'users', uid, 'history');
       const historySnapshot = await getDocs(historyRef);
@@ -464,7 +474,7 @@ class ApiService {
       await deleteDoc(doc(db, 'users', uid, 'settings', 'goals')).catch(() => {});
       await deleteDoc(doc(db, 'users', uid));
 
-      const user = auth.currentUser;
+      const user = auth?.currentUser;
       if (user) {
         await deleteUser(user);
       }

@@ -32,15 +32,20 @@ export default function SignUpScreen() {
     }
 
     setLoading(true);
-    const result = await api.signup(fullName, email, password);
-    setLoading(false);
+    try {
+      const result = await api.signup(fullName, email, password);
+      setLoading(false);
 
-    if (result.success) {
-      Alert.alert('Success', 'Account created!', [
-        { text: 'OK', onPress: () => router.push('/scanner') },
-      ]);
-    } else {
-      Alert.alert('Error', result.error || 'Failed to create account');
+      if (result.success) {
+        Alert.alert('Success', 'Account created!', [
+          { text: 'OK', onPress: () => router.push('/scanner') },
+        ]);
+      } else {
+        Alert.alert('Error', result.error || 'Failed to create account');
+      }
+    } catch (error) {
+      setLoading(false);
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
     }
   };
 

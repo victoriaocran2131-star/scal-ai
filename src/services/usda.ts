@@ -41,7 +41,7 @@ function mapNutrients(nutrients: Array<{ nutrientName: string; value: number; un
   for (const n of nutrients) {
     const key = NUTRIENT_MAP[n.nutrientName];
     if (key) {
-      result[key as keyof FoodItem] = n.unitName === 'KCAL' ? Math.round(n.value) : Math.round(n.value * 10) / 10;
+      (result as any)[key] = n.unitName === 'KCAL' ? Math.round(n.value) : Math.round(n.value * 10) / 10;
     }
   }
   return result;

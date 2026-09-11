@@ -1,6 +1,6 @@
 import { initializeApp, getApps } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getAuth, type Auth } from 'firebase/auth';
+import { getFirestore, type Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -11,21 +11,26 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID
 };
 
-let app: any;
-let auth: any;
-let db: any;
+let app: any = null;
+let auth: Auth | null = null;
+let db: Firestore | null = null;
 
 try {
-  const apps = getApps();
-  if (apps.length === 0) {
-    app = initializeApp(firebaseConfig);
+  const hasConfig = firebaseConfig.apiKey && firebaseConfig.projectId;
+  if (hasConfig) {
+    const apps = getApps();
+    if (apps.length === 0) {
+      app = initializeApp(firebaseConfig);
+    } else {
+      app = apps[0];
+    }
+    auth = getAuth(app);
+    db = getFirestore(app);
   } else {
-    app = apps[0];
+    console.warn('Scal AI: Firebase config not found. Running in offline mode.');
   }
-  auth = getAuth(app);
-  db = getFirestore(app);
-} catch (error) {
-  // Firebase initialization error
+} catch (error: any) {
+  console.warn('Scal AI: Firebase initialization failed:', error?.message || error);
 }
 
 export { app, auth, db };
