@@ -33,8 +33,8 @@ Whether you're tracking macros for fitness or simply want to eat smarter, Scal A
 
 Download Scal AI today and take control of your nutrition.`,
   keywords: "food scanner,nutrition tracker,calorie counter,health app,macro tracker,food recognition,diet tracker,nutrition facts,meal planner,fitness tracker,calorie calculator,daily nutrition",
-  supportUrl: "https://scalai.app/support",
-  marketingUrl: "https://scalai.app",
+  supportUrl: "https://scal-ai-4910c.web.app/support.html",
+  marketingUrl: "https://scal-ai-4910c.web.app",
   version: "1.0",
   copyright: "2026 ScalAI",
   appRatingDetails: {
