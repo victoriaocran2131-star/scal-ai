@@ -60,13 +60,13 @@ export default function AboutScreen() {
           <Text style={styles.sectionTitle}>Legal</Text>
           <TouchableOpacity
             style={styles.linkButton}
-            onPress={() => Linking.openURL('https://scalai.app/privacy')}
+            onPress={() => Linking.openURL('https://scal-ai-4910c.web.app/privacy.html')}
           >
             <Text style={styles.linkText}>Privacy Policy</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.linkButton}
-            onPress={() => Linking.openURL('https://scalai.app/terms')}
+            onPress={() => Linking.openURL('https://scal-ai-4910c.web.app/terms.html')}
           >
             <Text style={styles.linkText}>Terms of Service</Text>
           </TouchableOpacity>

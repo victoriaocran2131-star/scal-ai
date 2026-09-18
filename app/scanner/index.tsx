@@ -70,6 +70,7 @@ export default function ScannerScreen() {
       if (res.hasActiveSubscription) {
         setHasSubscription(true);
         await AsyncStorage.setItem('hasActiveSubscription', 'true');
+        await AsyncStorage.setItem('subscriptionCheckedAt', new Date().toISOString());
         if (res.subscription?.daysRemaining <= 2) {
           Alert.alert(
             'Subscription Expiring',
@@ -89,10 +90,16 @@ export default function ScannerScreen() {
       }
     } catch (error) {
       const localSub = await AsyncStorage.getItem('hasActiveSubscription');
-      if (localSub === 'true') {
+      const checkedAt = await AsyncStorage.getItem('subscriptionCheckedAt');
+      const hoursSinceCheck = checkedAt
+        ? (Date.now() - new Date(checkedAt).getTime()) / (1000 * 60 * 60)
+        : 999;
+
+      if (localSub === 'true' && hoursSinceCheck < 24) {
         setHasSubscription(true);
       } else {
         setHasSubscription(false);
+        await AsyncStorage.removeItem('hasActiveSubscription');
         router.push('/subscription');
       }
     }

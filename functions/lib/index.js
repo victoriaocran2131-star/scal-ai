@@ -111,6 +111,9 @@ exports.validateReceipt = functions.https.onCall(async (data, context) => {
         else if (activeReceipt.product_id.includes("yearly")) {
             plan = "yearly";
         }
+        await db.collection("users").doc(uid).set({
+            appleReceiptData: receiptData,
+        }, { merge: true });
         await db.collection("users").doc(uid).collection("subscription").doc("current").set({
             plan,
             startDate: admin.firestore.Timestamp.fromDate(new Date(parseInt(activeReceipt.purchase_date_ms))),
@@ -200,6 +203,7 @@ exports.validateReceiptOnPurchase = functions.firestore
         const userDoc = await db.collection("users").doc(uid).get();
         const userData = userDoc.data();
         if (!(userData === null || userData === void 0 ? void 0 : userData.appleReceiptData)) {
+            functions.logger.warn(`No appleReceiptData found for user ${uid}, skipping background re-validation`);
             return;
         }
         let result = await verifyReceiptWithApple(userData.appleReceiptData, false);
@@ -224,10 +228,21 @@ exports.validateReceiptOnPurchase = functions.firestore
                     lastValidatedAt: admin.firestore.FieldValue.serverTimestamp(),
                 });
             }
+            else {
+                await db
+                    .collection("users")
+                    .doc(uid)
+                    .collection("subscription")
+                    .doc("current")
+                    .update({
+                    endDate: admin.firestore.Timestamp.fromDate(new Date()),
+                    lastValidatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                });
+            }
         }
     }
     catch (error) {
-        console.error("Background validation error:", error);
+        functions.logger.error("Background validation error:", error);
     }
 });
 //# sourceMappingURL=index.js.map

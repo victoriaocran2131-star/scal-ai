@@ -421,7 +421,7 @@ class ApiService {
     }
   }
 
-  async activateSubscription(planId: string, paystackReference?: string): Promise<ApiResponse> {
+  async activateSubscription(planId: string): Promise<ApiResponse> {
     try {
       const uid = this.getUserId();
       if (!uid || !db) return { error: 'Not authenticated' };
@@ -447,7 +447,6 @@ class ApiService {
         plan: planId,
         startDate: Timestamp.fromDate(now),
         endDate: Timestamp.fromDate(endDate),
-        paystackReference: paystackReference || null,
         activatedAt: serverTimestamp(),
       });
 

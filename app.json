@@ -2,7 +2,7 @@
   "expo": {
     "name": "Scal AI",
     "slug": "scai-fd8xk2026",
-    "version": "1.0.50",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "scalai",
@@ -19,7 +19,7 @@
         ],
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "22",
+      "buildNumber": "25",
       "ageRating": {
         "mature": 0,
         "violenceCartoonFantasy": 0,

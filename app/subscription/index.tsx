@@ -16,6 +16,7 @@ import {
   endConnection,
   fetchProducts,
   requestPurchase,
+  getAvailablePurchases,
   finishTransaction,
   purchaseUpdatedListener,
   Purchase,
@@ -155,20 +156,15 @@ export default function SubscriptionScreen() {
         );
       } else {
         await finishTransaction({ purchase, isConsumable: false });
-        Alert.alert('Error', 'Subscription validation failed. Please try again.');
+        Alert.alert('Error', 'Subscription validation failed. Please try again or contact support.');
       }
     } catch (error) {
-      const planId = plans.find(p => p.productId === productId)?.id;
-      if (planId) {
-        await api.activateSubscription(planId);
-        await AsyncStorage.setItem('hasActiveSubscription', 'true');
-        await finishTransaction({ purchase, isConsumable: false });
-        Alert.alert(
-          'Subscription Active!',
-          'Your subscription has been activated. You can now scan food!',
-          [{ text: 'Start Scanning', onPress: () => router.push('/scanner') }]
-        );
-      }
+      await finishTransaction({ purchase, isConsumable: false });
+      Alert.alert(
+        'Validation Error',
+        'Could not verify your subscription. Please try again or contact support.',
+        [{ text: 'OK' }]
+      );
     }
     setLoading(false);
   }, []);
@@ -196,18 +192,54 @@ export default function SubscriptionScreen() {
   const handleRestorePurchases = async () => {
     setLoading(true);
     try {
-      const localSub = await AsyncStorage.getItem('hasActiveSubscription');
-      if (localSub === 'true') {
+      const user = JSON.parse(await AsyncStorage.getItem('scalai_user') || '{}');
+      if (!user.email) {
+        Alert.alert('Error', 'Please sign in first');
+        router.push('/signin');
+        setLoading(false);
+        return;
+      }
+
+      const purchases = await getAvailablePurchases();
+      if (!purchases || purchases.length === 0) {
+        Alert.alert('No Purchases Found', 'No previous purchases were found to restore.');
+        setLoading(false);
+        return;
+      }
+
+      const sortedPurchases = purchases.sort(
+        (a, b) => (b.transactionDate || 0) - (a.transactionDate || 0)
+      );
+
+      let validatedAny = false;
+      for (const purchase of sortedPurchases) {
+        try {
+          const validationResult = await validateReceipt({
+            receiptData: JSON.stringify(purchase),
+          });
+          const data = validationResult.data as any;
+          if (data.success) {
+            validatedAny = true;
+            await AsyncStorage.setItem('hasActiveSubscription', 'true');
+            await finishTransaction({ purchase, isConsumable: false });
+            break;
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+
+      if (validatedAny) {
         Alert.alert(
           'Purchases Restored!',
           'Your subscription has been restored.',
           [{ text: 'Start Scanning', onPress: () => router.push('/scanner') }]
         );
       } else {
-        Alert.alert('No Purchases Found', 'No previous purchases were found to restore.');
+        Alert.alert('No Active Subscription', 'No active subscription was found. If you believe this is an error, please contact support.');
       }
     } catch (error) {
-      Alert.alert('Error', 'Could not restore purchases.');
+      Alert.alert('Error', 'Could not restore purchases. Please try again.');
     }
     setLoading(false);
   };
@@ -284,9 +316,9 @@ export default function SubscriptionScreen() {
 
         <Text style={styles.terms}>
           By subscribing, you agree to our{' '}
-          <Text style={styles.termsLink} onPress={() => Linking.openURL('https://scalai.app/terms')}>Terms of Service</Text>
+          <Text style={styles.termsLink} onPress={() => Linking.openURL('https://scal-ai-4910c.web.app/terms.html')}>Terms of Service</Text>
           {' '}and{' '}
-          <Text style={styles.termsLink} onPress={() => Linking.openURL('https://scalai.app/privacy')}>Privacy Policy</Text>.
+          <Text style={styles.termsLink} onPress={() => Linking.openURL('https://scal-ai-4910c.web.app/privacy.html')}>Privacy Policy</Text>.
           {'\n'}You can cancel anytime in your App Store subscription settings.
         </Text>
       </ScrollView>
