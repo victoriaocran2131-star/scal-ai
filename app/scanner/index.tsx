@@ -3,7 +3,6 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useRef, useState } from 'react';
 import { Keyboard, ScrollView, Animated } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { scheduleLocalNotification } from '../../src/services/notifications';
 import {
   ActivityIndicator,
@@ -19,15 +18,14 @@ import { Colors, FontSize, Spacing } from '../../src/constants/theme';
 import { api } from '../../src/services/api';
 import { searchFood } from '../../src/data/foodDatabase';
 import { recognizeFood, setApiKey, isApiConfigured } from '../../src/services/foodRecognition';
-import { searchUsdaFood, setUsdaApiKey, getUsdaApiKey } from '../../src/services/usda';
+import { searchUsdaFood, setUsdaApiKey } from '../../src/services/usda';
 import ScanResult3D from '../../src/components/ScanResult3D';
 
 export default function ScannerScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<any>(null);
-  const [hasSubscription, setHasSubscription] = useState<boolean | null>(null);
-  const [todayLog, setTodayLog] = useState({ totalCalories: 0, totalProtein: 0, totalFat: 0, totalCarbs: 0 });
+  const [todayLog, setTodayLog] = useState({ totalCalories: 0, totalProtein: 0, totalFat: 0, totalCarbs: 0, totalFiber: 0, totalSugar: 0 });
   const [goals, setGoals] = useState({ calories: 2000, protein: 50, fat: 65, carbs: 300 });
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -39,7 +37,6 @@ export default function ScannerScreen() {
 
   useEffect(() => {
     Keyboard.dismiss();
-    checkSubscription();
     loadGoals();
     loadTodayLog();
     loadApiKey();
@@ -63,60 +60,22 @@ export default function ScannerScreen() {
     }
   }, [result]);
 
-  const checkSubscription = async () => {
-    try {
-      const result = await api.checkSubscription();
-      const res = result as any;
-      if (res.hasActiveSubscription) {
-        setHasSubscription(true);
-        await AsyncStorage.setItem('hasActiveSubscription', 'true');
-        await AsyncStorage.setItem('subscriptionCheckedAt', new Date().toISOString());
-        if (res.subscription?.daysRemaining <= 2) {
-          Alert.alert(
-            'Subscription Expiring',
-            `Your ${res.subscription.plan} plan expires in ${res.subscription.daysRemaining} day(s). Renew to keep scanning.`,
-            [
-              { text: 'Renew Now', onPress: () => router.push('/subscription') },
-              { text: 'Later' },
-            ]
-          );
-        }
-      } else {
-        setHasSubscription(false);
-        await AsyncStorage.removeItem('hasActiveSubscription');
-        Alert.alert('Subscription Required', 'You need an active subscription to scan food.', [
-          { text: 'Subscribe', onPress: () => router.push('/subscription') },
-        ]);
-      }
-    } catch (error) {
-      const localSub = await AsyncStorage.getItem('hasActiveSubscription');
-      const checkedAt = await AsyncStorage.getItem('subscriptionCheckedAt');
-      const hoursSinceCheck = checkedAt
-        ? (Date.now() - new Date(checkedAt).getTime()) / (1000 * 60 * 60)
-        : 999;
-
-      if (localSub === 'true' && hoursSinceCheck < 24) {
-        setHasSubscription(true);
-      } else {
-        setHasSubscription(false);
-        await AsyncStorage.removeItem('hasActiveSubscription');
-        router.push('/subscription');
-      }
-    }
-  };
-
   const loadGoals = async () => {
     try {
       const data = await api.getGoals();
       if (data && data.success && (data as any).goals) setGoals((data as any).goals);
-    } catch (error) {}
+    } catch (error) {
+      // Goals will use defaults
+    }
   };
 
   const loadTodayLog = async () => {
     try {
       const data = await api.getTodayLog();
       if (data && data.success && (data as any).log) setTodayLog((data as any).log);
-    } catch (error) {}
+    } catch (error) {
+      // Today log will stay at zeros
+    }
   };
 
   const loadApiKey = async () => {
@@ -132,7 +91,9 @@ export default function ScannerScreen() {
       if (usdaKey) {
         setUsdaApiKey(usdaKey);
       }
-    } catch (error) {}
+    } catch (error) {
+      // API keys will remain unconfigured
+    }
   };
 
   const handleSearch = async (query: string) => {
@@ -220,7 +181,7 @@ export default function ScannerScreen() {
 
   const autoSaveToHistory = async (food: any) => {
     try {
-      const result = await api.addHistory({ 
+      await api.addHistory({ 
         name: food.name || 'Unknown Food',
         calories: food.calories || 0, 
         protein: food.protein || 0, 
@@ -230,11 +191,8 @@ export default function ScannerScreen() {
         sugar: food.sugar || 0, 
         digestion: food.digestion || '' 
       });
-      if (result.error) {
-        console.error('Failed to save history:', result.error);
-      }
     } catch (e) {
-      console.error('Failed to save history:', e);
+      // History save failed silently - food was still scanned
     }
   };
 
@@ -268,19 +226,7 @@ export default function ScannerScreen() {
   const getProgressColor = (p: number) => { if (p < 0.5) return '#4CAF50'; if (p < 0.8) return Colors.gold; return '#f44336'; };
 
   if (!permission) {
-    return (<View style={styles.centered}><ActivityIndicator size="large" color={Colors.gold} /><Text style={styles.loadingText}>Checking subscription...</Text></View>);
-  }
-
-  if (hasSubscription === false) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.permissionContainer}>
-          <Text style={styles.permissionTitle}>Subscription Required</Text>
-          <Text style={styles.permissionText}>You need an active subscription to use Scal AI. Subscribe to start scanning food and tracking nutrition.</Text>
-          <TouchableOpacity style={styles.button} onPress={() => router.push('/subscription')}><Text style={styles.buttonText}>Subscribe Now</Text></TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
+    return (<View style={styles.centered}><ActivityIndicator size="large" color={Colors.gold} /><Text style={styles.loadingText}>Loading camera...</Text></View>);
   }
 
   if (!permission.granted) {
@@ -303,7 +249,6 @@ export default function ScannerScreen() {
         <View style={styles.headerButtons}>
           <TouchableOpacity onPress={() => router.push('/charts')} style={styles.headerBtn}><Text style={styles.headerBtnText}>📈</Text></TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/reminders')} style={styles.headerBtn}><Text style={styles.headerBtnText}>🔔</Text></TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/subscription')} style={styles.headerBtn}><Text style={styles.headerBtnText}>⭐</Text></TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/history')} style={styles.headerBtn}><Text style={styles.headerBtnText}>📊</Text></TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/profile')} style={styles.headerBtn}><Text style={styles.headerBtnText}>👤</Text></TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/about')} style={styles.headerBtn}><Text style={styles.headerBtnText}>ℹ️</Text></TouchableOpacity>

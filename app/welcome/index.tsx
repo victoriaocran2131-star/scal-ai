@@ -5,35 +5,35 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, FontSize, Spacing } from '../../src/constants/theme';
 
-const bibleVerses = [
-  { text: 'For I know the plans I have for you, declares the Lord, plans to prosper you and not to harm you, plans to give you hope and a future.', reference: 'Jeremiah 29:11' },
-  { text: 'Trust in the Lord with all your heart and lean not on your own understanding.', reference: 'Proverbs 3:5' },
-  { text: 'I can do all things through Christ who strengthens me.', reference: 'Philippians 4:13' },
-  { text: 'The Lord is my shepherd; I shall not want.', reference: 'Psalm 23:1' },
-  { text: 'Be strong and courageous. Do not be afraid; do not be discouraged.', reference: 'Joshua 1:9' },
-  { text: 'And we know that in all things God works for the good of those who love him.', reference: 'Romans 8:28' },
-  { text: 'Commit your works to the Lord, and your thoughts will be established.', reference: 'Proverbs 16:3' },
-  { text: 'But those who hope in the Lord will renew their strength.', reference: 'Isaiah 40:31' },
-  { text: 'The Lord will fight for you; you need only to be still.', reference: 'Exodus 14:14' },
-  { text: 'And my God will meet all your needs according to the riches of his glory.', reference: 'Philippians 4:19' },
-  { text: 'Give thanks to the Lord, for he is good; his love endures forever.', reference: 'Psalm 107:1' },
-  { text: 'The joy of the Lord is your strength.', reference: 'Nehemiah 8:10' },
-  { text: 'He gives strength to the weary and increases the power of the weak.', reference: 'Isaiah 40:29' },
-  { text: 'Come to me, all you who are weary and burdened, and I will give you rest.', reference: 'Matthew 11:28' },
-  { text: 'For God gave us a spirit not of fear but of power and love and self-control.', reference: '2 Timothy 1:7' },
-  { text: 'The Lord is close to the brokenhearted and saves those who are crushed in spirit.', reference: 'Psalm 34:18' },
-  { text: 'Do not be anxious about anything, but in every situation, by prayer and petition, with thanksgiving, present your requests to God.', reference: 'Philippians 4:6' },
-  { text: 'I have loved you with an everlasting love; I have drawn you with unfailing kindness.', reference: 'Jeremiah 31:3' },
-  { text: 'The Lord is my light and my salvation—whom shall I fear?', reference: 'Psalm 27:1' },
-  { text: 'No weapon forged against you will prevail.', reference: 'Isaiah 54:17' },
+const motivationalQuotes = [
+  { text: 'Take care of your body. It is the only place you have to live.', reference: 'Jim Rohn' },
+  { text: 'The food you eat can be either the safest and most powerful form of medicine or the slowest form of poison.', reference: 'Ann Wigmore' },
+  { text: 'Let food be thy medicine and medicine be thy food.', reference: 'Hippocrates' },
+  { text: 'A healthy outside starts from the inside.', reference: 'Robert Urich' },
+  { text: 'Your body hears everything your mind says.', reference: 'Naomi Judd' },
+  { text: 'The first wealth is health.', reference: 'Ralph Waldo Emerson' },
+  { text: 'Health is not valued till sickness comes.', reference: 'Thomas Fuller' },
+  { text: 'To keep the body in good health is a duty, otherwise we shall not be able to keep the mind strong and clear.', reference: 'Buddha' },
+  { text: 'He who has health has hope; and he who has hope has everything.', reference: 'Thomas Carlyle' },
+  { text: 'Good health is not something we can buy. However, it can be an extremely valuable savings account.', reference: 'Anne Wilson Schaef' },
+  { text: 'The greatest wealth is health.', reference: 'Virgil' },
+  { text: 'A fit body, a calm mind, a house full of love. These things cannot be bought - they must be earned.', reference: 'Naval Ravikant' },
+  { text: 'Health is a state of body. Wellness is a state of being.', reference: 'J. Stanford' },
+  { text: 'Wellness is the complete integration of body, mind, and spirit.', reference: 'Greg Anderson' },
+  { text: 'The human body is the best picture of the human soul.', reference: 'Ludwig Wittgenstein' },
+  { text: 'When the body is weak, the mind is easily corrupted.', reference: 'Unknown' },
+  { text: 'A healthy mind in a healthy body.', reference: 'Juvenal' },
+  { text: 'Physical fitness is the first requisite of happiness.', reference: 'Joseph Pilates' },
+  { text: 'Health and cheerfulness naturally beget each other.', reference: 'Joseph Addison' },
+  { text: 'The secret of health for both mind and body is not to mourn for the past, worry about the future, or anticipate troubles, but to live in the present moment wisely and earnestly.', reference: 'Buddha' },
 ];
 
 export default function WelcomeScreen() {
-  const [verse, setVerse] = useState(bibleVerses[0]);
+  const [verse, setVerse] = useState(motivationalQuotes[0]);
 
   useEffect(() => {
-    const randomIndex = Math.floor(Math.random() * bibleVerses.length);
-    setVerse(bibleVerses[randomIndex]);
+    const randomIndex = Math.floor(Math.random() * motivationalQuotes.length);
+    setVerse(motivationalQuotes[randomIndex]);
   }, []);
 
   return (

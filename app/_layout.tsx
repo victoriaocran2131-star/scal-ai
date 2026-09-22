@@ -36,7 +36,6 @@ export default function RootLayout() {
         <Stack.Screen name="scanner/index" />
         <Stack.Screen name="charts/index" />
         <Stack.Screen name="reminders/index" />
-        <Stack.Screen name="subscription/index" />
         <Stack.Screen name="history/index" />
         <Stack.Screen name="about/index" />
         <Stack.Screen name="profile/index" />

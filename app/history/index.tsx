@@ -40,11 +40,9 @@ export default function HistoryScreen() {
       if (result.success) {
         setHistory(result.history || []);
       } else if (result.error) {
-        console.error('History error:', result.error);
         setHistory([]);
       }
     } catch (err) {
-      console.error('Failed to load history:', err);
       setHistory([]);
     }
     setLoading(false);
@@ -59,7 +57,7 @@ export default function HistoryScreen() {
       loadHistory(false);
     });
     return unsubscribe;
-  }, [navigation, filter]);
+  }, [navigation]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

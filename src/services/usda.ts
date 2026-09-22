@@ -34,6 +34,9 @@ const NUTRIENT_MAP: Record<string, string> = {
   'Total lipid (fat)': 'fat',
   'Fiber, total dietary': 'fiber',
   'Sugars, total including NLEA': 'sugar',
+  'Potassium, K': 'potassium',
+  'Phosphorus, P': 'phosphorus',
+  'Sodium, Na': 'sodium',
 };
 
 function mapNutrients(nutrients: Array<{ nutrientName: string; value: number; unitName: string }>): Partial<FoodItem> {
@@ -112,6 +115,9 @@ export async function searchUsdaFood(query: string): Promise<FoodItem | null> {
       fat: nutrients.fat || 0,
       fiber: nutrients.fiber || 0,
       sugar: nutrients.sugar || 0,
+      potassium: nutrients.potassium,
+      phosphorus: nutrients.phosphorus,
+      sodium: nutrients.sodium,
       digestion: digestion.time,
       digestionDesc: digestion.desc,
       category,

@@ -14,3 +14,6 @@ scripts/
 app-store-screenshots/
 .vscode/
 .git/
+.env
+.env.*
+!.env.example

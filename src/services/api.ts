@@ -20,7 +20,6 @@ import {
   deleteDoc,
   query,
   orderBy,
-  Timestamp,
 } from 'firebase/firestore';
 
 
@@ -34,8 +33,6 @@ interface ApiResponse<T = any> {
   logs?: any[];
   user?: any;
   token?: string;
-  hasActiveSubscription?: boolean;
-  subscription?: any;
   goals?: any;
   isNewUser?: boolean;
 }
@@ -156,7 +153,6 @@ class ApiService {
   async signOut(): Promise<void> {
     if (auth) await signOut(auth);
     await AsyncStorage.removeItem('scalai_user');
-    await AsyncStorage.removeItem('hasActiveSubscription');
     await AsyncStorage.removeItem('subscriptionInfo');
   }
 
@@ -386,78 +382,6 @@ class ApiService {
     } catch (error: any) {
       return { error: 'Failed to load daily logs: ' + (error.message || 'Unknown error') };
     }
-  }
-
-  // ==================== SUBSCRIPTION ====================
-
-  async checkSubscription(): Promise<ApiResponse> {
-    try {
-      const uid = this.getUserId();
-      if (!uid || !db) {
-        return { hasActiveSubscription: false };
-      }
-
-      const subDoc = await getDoc(doc(db, 'users', uid, 'subscription', 'current'));
-      if (subDoc.exists()) {
-        const sub = subDoc.data();
-        const endDate = sub.endDate?.toDate?.();
-        if (endDate && endDate > new Date()) {
-          const daysRemaining = Math.ceil((endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-          return {
-            success: true,
-            hasActiveSubscription: true,
-            subscription: {
-              plan: sub.plan,
-              daysRemaining,
-              endDate: endDate.toISOString(),
-            },
-          };
-        }
-      }
-
-      return { hasActiveSubscription: false };
-    } catch (error: any) {
-      return { hasActiveSubscription: false };
-    }
-  }
-
-  async activateSubscription(planId: string): Promise<ApiResponse> {
-    try {
-      const uid = this.getUserId();
-      if (!uid || !db) return { error: 'Not authenticated' };
-
-      const now = new Date();
-      let endDate = new Date(now);
-
-      switch (planId) {
-        case 'weekly':
-          endDate.setDate(endDate.getDate() + 7);
-          break;
-        case 'monthly':
-          endDate.setMonth(endDate.getMonth() + 1);
-          break;
-        case 'yearly':
-          endDate.setFullYear(endDate.getFullYear() + 1);
-          break;
-        default:
-          endDate.setMonth(endDate.getMonth() + 1);
-      }
-
-      await setDoc(doc(db, 'users', uid, 'subscription', 'current'), {
-        plan: planId,
-        startDate: Timestamp.fromDate(now),
-        endDate: Timestamp.fromDate(endDate),
-        activatedAt: serverTimestamp(),
-      });
-
-      return { success: true };
-    } catch (error: any) {
-      return { error: 'Failed to activate subscription' };
-    }
-  }
-
-  async subscribe(planId: string): Promise<ApiResponse> {
-    return this.activateSubscription(planId);
   }
 
   // ==================== GOALS ====================

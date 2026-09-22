@@ -5,7 +5,7 @@ workflows:
     environment:
       groups:
         - expo_credentials
-      flutter: stable
+      node: latest
       xcode: latest
       cocoapods: default
     triggering:

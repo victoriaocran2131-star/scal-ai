@@ -1,43 +1,56 @@
-# FoodScan - Calorie & Nutrient Scanner
+# Scal AI - Food Scanner & Nutrition Tracker
 
-A web-based food scanning app that uses your camera to identify food and calculate calories, nutrients, and digestion time.
+A mobile app that uses your camera to identify food and calculate calories, nutrients, and digestion time.
 
 ## Features
 
 - **Camera Integration**: Use your device camera to scan food
-- **Food Recognition**: AI-powered food identification (simulated demo)
-- **Nutrition Data**: Calories, protein, carbs, fat, fiber, sugar
+- **AI Food Recognition**: Google Cloud Vision API-powered food identification
+- **USDA Nutrition Data**: Accurate nutrition data from USDA FoodData Central
+- **Nutrition Tracking**: Calories, protein, carbs, fat, fiber, sugar
 - **Digestion Time**: How long food takes to digest in your body
 - **Portion Control**: Adjust portion sizes for accurate calculations
 - **Manual Search**: Search from 100+ foods if camera isn't available
 - **Daily Log**: Track all food eaten throughout the day
+- **Charts & Analytics**: Visualize your nutrition trends
+- **Meal Reminders**: Set reminders to track your meals
+- **Subscription Plans**: Weekly, monthly, and yearly plans available
 
-## How to Use
+## Tech Stack
 
-1. Open `index.html` in a modern browser
-2. Click "Start Camera" to enable your webcam
-3. Point at food and click "Scan Food"
-4. View nutrition info and digestion time
-5. Adjust portion size if needed
-6. Click "Add to Log" to save to your daily tracker
+- **Frontend**: React Native with Expo SDK 56
+- **Backend**: Firebase (Firestore, Authentication, Cloud Functions)
+- **AI**: Google Cloud Vision API for food recognition
+- **Nutrition Data**: USDA FoodData Central API
+- **Push Notifications**: Expo Notifications
+- **In-App Purchases**: react-native-iap with Apple IAP
 
-## Files
+## Getting Started
 
-- `index.html` - Main app structure
-- `style.css` - Styling and animations
-- `foodDatabase.js` - 100+ foods with nutrition data
-- `app.js` - Main application logic
+```bash
+npm install
+npm start
+```
 
-## Browser Requirements
+## Building
 
-- Modern browser (Chrome, Firefox, Edge, Safari)
-- Camera permission for scanning feature
-- Works on desktop and mobile
+```bash
+# iOS
+eas build --platform ios
 
-## Note
+# Android
+eas build --platform android
+```
 
-This is a demo version. For production use, integrate with a food recognition API like:
-- Google Vision AI
-- Clarifai Food Model
-- Nutritionix API
-- Edamam API
+## Environment Variables
+
+Create a `.env` file with:
+
+```
+EXPO_PUBLIC_GOOGLE_VISION_API_KEY=your_google_vision_key
+EXPO_PUBLIC_USDA_API_KEY=your_usda_key
+```
+
+## License
+
+ISC

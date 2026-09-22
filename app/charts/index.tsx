@@ -36,11 +36,9 @@ export default function ChartsScreen() {
       if (result.success && result.logs) {
         setDailyLogs(fillMissingDays(result.logs));
       } else if (result.error) {
-        console.error('Charts error:', result.error);
         setDailyLogs([]);
       }
     } catch (err) {
-      console.error('Failed to load chart data:', err);
       setDailyLogs([]);
     }
   };
@@ -54,7 +52,7 @@ export default function ChartsScreen() {
       loadData();
     });
     return unsubscribe;
-  }, [navigation, period]);
+  }, [navigation]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

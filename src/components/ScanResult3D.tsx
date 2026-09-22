@@ -11,7 +11,7 @@ function NutrientBar({ label, value, max, unit, color }: { label: string; value:
 
   useEffect(() => {
     Animated.timing(barAnim, { toValue: progress, duration: 1000, useNativeDriver: false }).start();
-  }, []);
+  }, [progress]);
 
   return (
     <View style={styles.nutrientRow}>
@@ -118,7 +118,7 @@ export default function ScanResult3D({ food }: Props) {
 
         <View style={styles.disclaimerContainer}>
           <Text style={styles.disclaimerText}>
-            This information is for educational purposes only and is not medical advice. Consult a healthcare professional for dietary guidance.
+            This information is for educational purposes only and is not medical advice. It cannot diagnose or treat any condition. Always check with your doctor before making medical decisions.
           </Text>
         </View>
       </LinearGradient>

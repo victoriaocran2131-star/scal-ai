@@ -20,7 +20,6 @@ export default function ProfileScreen() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [subscriptionInfo, setSubscriptionInfo] = useState<any>(null);
 
   useEffect(() => {
     loadProfile();
@@ -37,13 +36,8 @@ export default function ProfileScreen() {
         setFullName(cached.fullName || '');
         setEmail(cached.email || '');
       }
-
-      const subResult = await api.checkSubscription();
-      if (subResult.subscription) {
-        setSubscriptionInfo(subResult.subscription);
-      }
     } catch (error) {
-      console.error('Failed to load profile');
+      // Profile will use cached data from AsyncStorage
     }
     setLoading(false);
   };
@@ -133,26 +127,6 @@ export default function ProfileScreen() {
         <View style={styles.avatarContainer}>
           <Text style={styles.avatarText}>{fullName[0]?.toUpperCase() || 'U'}</Text>
         </View>
-
-        {/* Subscription Info */}
-        {subscriptionInfo && (
-          <View style={styles.subscriptionCard}>
-            <Text style={styles.subscriptionTitle}>Subscription Status</Text>
-            <View style={styles.subscriptionRow}>
-              <Text style={styles.subscriptionLabel}>Plan:</Text>
-              <Text style={styles.subscriptionValue}>{subscriptionInfo.plan}</Text>
-            </View>
-            <View style={styles.subscriptionRow}>
-              <Text style={styles.subscriptionLabel}>Days Remaining:</Text>
-              <Text style={[styles.subscriptionValue, styles.daysRemaining]}>
-                {subscriptionInfo.daysRemaining} days
-              </Text>
-            </View>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${Math.min((subscriptionInfo.daysRemaining / 30) * 100, 100)}%` }]} />
-            </View>
-          </View>
-        )}
 
         {/* Edit Form */}
         <View style={styles.formCard}>
@@ -247,52 +221,6 @@ const styles = StyleSheet.create({
     fontSize: 40,
     fontWeight: 'bold',
     color: Colors.black,
-  },
-  subscriptionCard: {
-    backgroundColor: 'rgba(0, 212, 170, 0.1)',
-    borderRadius: 16,
-    padding: Spacing.lg,
-    marginBottom: Spacing.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 212, 170, 0.3)',
-  },
-  subscriptionTitle: {
-    fontSize: FontSize.large,
-    color: '#00d4aa',
-    fontWeight: 'bold',
-    marginBottom: Spacing.md,
-  },
-  subscriptionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.sm,
-  },
-  subscriptionLabel: {
-    color: Colors.grayLight,
-    fontSize: FontSize.medium,
-  },
-  subscriptionValue: {
-    color: Colors.white,
-    fontSize: FontSize.medium,
-    fontWeight: '600',
-    textTransform: 'capitalize',
-  },
-  daysRemaining: {
-    color: '#00d4aa',
-    fontSize: FontSize.large,
-    fontWeight: 'bold',
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 4,
-    marginTop: Spacing.md,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#00d4aa',
-    borderRadius: 4,
   },
   formCard: {
     backgroundColor: Colors.cardBg,

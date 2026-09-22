@@ -17,29 +17,12 @@
         "UIBackgroundModes": [
           "remote-notification"
         ],
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIRequiredDeviceCapabilities": [
+          "camera"
+        ]
       },
-      "buildNumber": "25",
-      "ageRating": {
-        "mature": 0,
-        "violenceCartoonFantasy": 0,
-        "realisticViolence": 0,
-        "prolongedGraphicSadRealisticViolence": 0,
-        "profanityCrudeHumor": 0,
-        "matureSuggestive": 0,
-        "horrorFear": 0,
-        "medicalTreatmentInfo": 0,
-        "alcoholTobaccoDrugUse": 0,
-        "nudity": 0,
-        "graphicSexualContentNudity": 0,
-        "gambling": 0,
-        "sexualContentGraphicNudity": 0,
-        "sexualContentNudity": 0,
-        "medicalInfoTreatment": 0,
-        "alcoholTobaccoDrugs": 0,
-        "violence": 0,
-        "graphicMedicalTreatment": 0
-      }
+      "buildNumber": "26"
     },
     "web": {
       "favicon": "./assets/images/favicon.png"

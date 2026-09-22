@@ -82,7 +82,7 @@ export default function AboutScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.version}>Version 1.0.50</Text>
+        <Text style={styles.version}>Version 1.0.0</Text>
         <Text style={styles.copyright}>© 2026 Scal AI. All rights reserved.</Text>
       </ScrollView>
     </SafeAreaView>

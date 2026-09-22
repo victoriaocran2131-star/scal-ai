@@ -250,21 +250,26 @@ Copy and paste this:
 ```
 Scal AI - Your AI-Powered Food Scanner
 
-Transform your nutrition tracking with the power of artificial intelligence. Simply point your camera at any food item and instantly get detailed nutritional information.
+Transform your nutrition tracking with the power of artificial intelligence. Simply point your camera at any food item and instantly get detailed nutritional information powered by Google Cloud Vision AI.
 
 KEY FEATURES:
-- AI-Powered Food Recognition
+- AI-Powered Food Recognition using Google Cloud Vision
 - Instant Calorie Tracking
-- Protein & Fat Analysis
+- Protein, Carbs, Fat, Fiber & Sugar Analysis
 - Digestion Time Information
 - Scan History with Filters
-- Beautiful Gold-Themed Design
+- Daily Nutrition Goals
+- Beautiful Dark-Themed Design
 
 HOW IT WORKS:
 1. Open the app and tap the scanner
 2. Point your camera at any food item
-3. Get instant nutritional breakdown
-4. Track your daily intake
+3. AI analyzes the image and identifies the food
+4. Get instant nutritional breakdown
+5. Track your daily intake
+
+IMPORTANT DISCLAIMER:
+Scal AI provides nutritional information for general informational purposes only. The app is not a substitute for professional medical or dietary advice. Always consult a qualified healthcare provider before making significant changes to your diet.
 
 Perfect for fitness enthusiasts, health-conscious individuals, and anyone wanting to understand their food better.
 

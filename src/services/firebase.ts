@@ -27,10 +27,10 @@ try {
     auth = getAuth(app);
     db = getFirestore(app);
   } else {
-    console.warn('Scal AI: Firebase config not found. Running in offline mode.');
+    // Firebase config not found - running in offline mode
   }
 } catch (error: any) {
-  console.warn('Scal AI: Firebase initialization failed:', error?.message || error);
+  // Firebase initialization failed
 }
 
 export { app, auth, db };
