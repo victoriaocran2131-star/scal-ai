@@ -206,13 +206,13 @@ export async function recognizeFood(base64Image: string): Promise<{
       if (errorMsg.includes('API key not valid') || errorMsg.includes('invalid')) {
         return {
           success: false,
-          error: 'Your API key is invalid. Please get a new key from Google Cloud Console:\nhttps://console.cloud.google.com/apis/credentials',
+          error: 'AI scanning is temporarily unavailable. Please search manually.',
         };
       }
       
       return {
         success: false,
-        error: errorMsg,
+        error: 'Could not analyze the image. Please try again or search manually.',
       };
     }
 

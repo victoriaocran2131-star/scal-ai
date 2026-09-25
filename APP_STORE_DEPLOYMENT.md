@@ -74,7 +74,7 @@ Back in App Store Connect, click your app, then:
 **App Review Information:**
 - Contact: Your name and email
 - Phone: Your phone number
-- Notes for reviewer: "Test account: test@scalai.app / password: test123"
+- Notes for reviewer: "The app requires account creation. You can create a new account directly on the sign-up screen."
 
 **Version Release:**
 - Select "Manually release this version"

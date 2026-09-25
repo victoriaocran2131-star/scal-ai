@@ -66,7 +66,7 @@ class ApiService {
   // ==================== AUTH ====================
 
   async signup(fullName: string, email: string, password: string): Promise<ApiResponse> {
-    if (!this.isConfigured()) return { error: 'Firebase is not configured. Please set up your .env file.' };
+    if (!this.isConfigured()) return { error: 'Service is not available. Please contact support.' };
     try {
       const userCredential = await createUserWithEmailAndPassword(auth!, email, password);
       const user = userCredential.user;
@@ -87,13 +87,17 @@ class ApiService {
     } catch (error: any) {
       const message = error.code === 'auth/email-already-in-use'
         ? 'An account with this email already exists.'
-        : error.message || 'Failed to create account';
+        : error.code === 'auth/weak-password'
+        ? 'Password must be at least 6 characters.'
+        : error.code === 'auth/invalid-email'
+        ? 'Please enter a valid email address.'
+        : 'Failed to create account. Please try again.';
       return { error: message };
     }
   }
 
   async signin(email: string, password: string): Promise<ApiResponse> {
-    if (!this.isConfigured()) return { error: 'Firebase is not configured. Please set up your .env file.' };
+    if (!this.isConfigured()) return { error: 'Service is not available. Please contact support.' };
     try {
       const userCredential = await signInWithEmailAndPassword(auth!, email, password);
       const user = userCredential.user;
@@ -111,15 +115,17 @@ class ApiService {
     } catch (error: any) {
       const message = error.code === 'auth/user-not-found'
         ? 'No account found with this email.'
-        : error.code === 'auth/wrong-password'
-        ? 'Incorrect password.'
-        : error.message || 'Failed to sign in';
+        : error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential'
+        ? 'Incorrect email or password.'
+        : error.code === 'auth/too-many-requests'
+        ? 'Too many failed attempts. Please try again later.'
+        : 'Failed to sign in. Please try again.';
       return { error: message };
     }
   }
 
   async googleSignIn(idToken: string): Promise<ApiResponse> {
-    if (!this.isConfigured()) return { error: 'Firebase is not configured. Please set up your .env file.' };
+    if (!this.isConfigured()) return { error: 'Service is not available. Please contact support.' };
     try {
       const credential = GoogleAuthProvider.credential(idToken);
       const userCredential = await signInWithCredential(auth!, credential);
@@ -146,7 +152,7 @@ class ApiService {
 
       return { success: true, user: { uid: user.uid, fullName: user.displayName, email: user.email }, isNewUser };
     } catch (error: any) {
-      return { error: error.message || 'Failed to sign in with Google' };
+      return { error: 'Failed to sign in with Google. Please try again.' };
     }
   }
 
@@ -408,6 +414,19 @@ class ApiService {
       const uid = this.getUserId();
       if (!uid || !db) return { error: 'Not authenticated' };
 
+      const user = auth?.currentUser;
+
+      if (user) {
+        try {
+          await deleteUser(user);
+        } catch (authError: any) {
+          if (authError.code === 'auth/requires-recent-login') {
+            return { error: 'Please sign out and sign back in, then try deleting your account again.' };
+          }
+          throw authError;
+        }
+      }
+
       const historyRef = collection(db, 'users', uid, 'history');
       const historySnapshot = await getDocs(historyRef);
       const historyDeletions = historySnapshot.docs.map((d) => deleteDoc(d.ref));
@@ -415,18 +434,13 @@ class ApiService {
 
       await deleteDoc(doc(db, 'users', uid, 'subscription', 'current')).catch(() => {});
       await deleteDoc(doc(db, 'users', uid, 'settings', 'goals')).catch(() => {});
-      await deleteDoc(doc(db, 'users', uid));
-
-      const user = auth?.currentUser;
-      if (user) {
-        await deleteUser(user);
-      }
+      await deleteDoc(doc(db, 'users', uid)).catch(() => {});
 
       await AsyncStorage.clear();
 
       return { success: true };
     } catch (error: any) {
-      return { error: 'Failed to delete account' };
+      return { error: 'Failed to delete account. Please try again.' };
     }
   }
 

@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
+import { registerForPushNotificationsAsync } from '../../src/services/notifications';
 import { Colors, FontSize, Spacing } from '../../src/constants/theme';
 
 interface Reminder {
@@ -77,29 +78,39 @@ export default function RemindersScreen() {
   };
 
   const scheduleReminders = async (s: Settings) => {
-    await Notifications.cancelAllScheduledNotificationsAsync();
+    try {
+      await Notifications.cancelAllScheduledNotificationsAsync();
 
-    if (!s.enabled) return;
+      if (!s.enabled) return;
 
-    const types = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
-    for (const type of types) {
-      const reminder = s[type];
-      if (!reminder.enabled) continue;
+      const types = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
+      for (const type of types) {
+        const reminder = s[type];
+        if (!reminder.enabled) continue;
 
-      const [hours, minutes] = reminder.time.split(':').map(Number);
-      const config = reminderConfig[type];
+        const match = reminder.time.match(/^(\d{1,2}):(\d{2})$/);
+        if (!match) continue;
 
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: config.title,
-          body: config.body,
-        },
-        trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.DAILY,
-          hour: hours,
-          minute: minutes,
-        },
-      });
+        const hours = parseInt(match[1], 10);
+        const minutes = parseInt(match[2], 10);
+        if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) continue;
+
+        const config = reminderConfig[type];
+
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: config.title,
+            body: config.body,
+          },
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DAILY,
+            hour: hours,
+            minute: minutes,
+          },
+        });
+      }
+    } catch (error) {
+      // Scheduling failed silently
     }
   };
 
@@ -111,9 +122,10 @@ export default function RemindersScreen() {
         Alert.alert('Permission Denied', 'Please enable notifications in device settings.');
         return;
       }
+      registerForPushNotificationsAsync().catch(() => {});
       await scheduleReminders(newSettings);
     } else {
-      await Notifications.cancelAllScheduledNotificationsAsync();
+      await Notifications.cancelAllScheduledNotificationsAsync().catch(() => {});
     }
     saveSettings(newSettings);
   };

@@ -14,16 +14,15 @@ A mobile app that uses your camera to identify food and calculate calories, nutr
 - **Daily Log**: Track all food eaten throughout the day
 - **Charts & Analytics**: Visualize your nutrition trends
 - **Meal Reminders**: Set reminders to track your meals
-- **Subscription Plans**: Weekly, monthly, and yearly plans available
+- **Free to Use**: All features available at no cost
 
 ## Tech Stack
 
 - **Frontend**: React Native with Expo SDK 56
-- **Backend**: Firebase (Firestore, Authentication, Cloud Functions)
+- **Backend**: Firebase (Firestore, Authentication)
 - **AI**: Google Cloud Vision API for food recognition
 - **Nutrition Data**: USDA FoodData Central API
 - **Push Notifications**: Expo Notifications
-- **In-App Purchases**: react-native-iap with Apple IAP
 
 ## Getting Started
 

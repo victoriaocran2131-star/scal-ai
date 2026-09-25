@@ -14,3 +14,5 @@ dist/
 *.mobileprovision
 *.orig.*
 firebase-debug.log
+.firebase/
+start-dev.bat

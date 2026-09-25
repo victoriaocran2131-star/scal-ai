@@ -2,13 +2,11 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useEffect } from 'react';
-import { registerForPushNotificationsAsync, addNotificationListeners } from '../src/services/notifications';
+import { addNotificationListeners } from '../src/services/notifications';
 
 export default function RootLayout() {
   useEffect(() => {
     try {
-      registerForPushNotificationsAsync().catch(() => {});
-
       const removeListeners = addNotificationListeners(
         () => {},
         () => {}

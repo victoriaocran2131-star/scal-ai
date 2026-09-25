@@ -84,8 +84,6 @@ export default function ScannerScreen() {
       if (key && key.length >= 20) {
         setApiKey(key);
         setApiConfigured(true);
-      } else if (key) {
-        Alert.alert('Invalid API Key', 'The Google Vision API key appears to be invalid. AI scanning may not work.');
       }
       const usdaKey = process.env.EXPO_PUBLIC_USDA_API_KEY || '';
       if (usdaKey) {
@@ -160,8 +158,8 @@ export default function ScannerScreen() {
 
     if (imageBase64 && !isApiConfigured()) {
       Alert.alert(
-        'AI Scanning Not Available',
-        'Google Vision API key not configured. Please search manually or set up an API key in Settings.',
+        'AI Scanning Unavailable',
+        'AI scanning is not available right now. Please search manually.',
         [
           { text: 'Search Manually', onPress: () => setShowSearch(true) },
           { text: 'Cancel', onPress: () => setScanning(false) },
@@ -308,7 +306,7 @@ export default function ScannerScreen() {
               <Text style={styles.searchButtonText}>Search Food Manually</Text>
             </TouchableOpacity>
             {!apiConfigured && (
-              <Text style={styles.apiWarning}>AI scanning requires a Google Vision API key</Text>
+              <Text style={styles.apiWarning}>AI scanning is unavailable. Please search manually.</Text>
             )}
           </View>
         )}
