@@ -120,61 +120,74 @@ export default function ScannerScreen() {
     setSearchResults([]);
     await autoSaveToHistory(food);
     await loadTodayLog();
-    scheduleLocalNotification('Food Logged!', `${food.calories} kcal - ${food.name}`, { calories: food.calories });
+    try {
+      scheduleLocalNotification('Food Logged!', `${food.calories} kcal - ${food.name}`, { calories: food.calories });
+    } catch (e) {
+      // Notification failed silently
+    }
   };
 
   const simulateScan = async (imageBase64?: string) => {
     setScanning(true);
     setResult(null);
 
-    if (imageBase64 && isApiConfigured()) {
-      const apiResult = await recognizeFood(imageBase64);
+    try {
+      if (imageBase64 && isApiConfigured()) {
+        const apiResult = await recognizeFood(imageBase64);
 
-      if (apiResult.success && apiResult.food) {
-        let food = apiResult.food;
-        const usdaData = await searchUsdaFood(food.name);
-        if (usdaData && usdaData.calories > 0) {
-          food = usdaData;
+        if (apiResult.success && apiResult.food) {
+          let food = apiResult.food;
+          const usdaData = await searchUsdaFood(food.name);
+          if (usdaData && usdaData.calories > 0) {
+            food = usdaData;
+          }
+          setResult(food);
+          setScanning(false);
+          await autoSaveToHistory(food);
+          await loadTodayLog();
+          try {
+            scheduleLocalNotification('Scan Complete!', `${food.calories} kcal detected`, { calories: food.calories });
+          } catch (e) {
+            // Notification failed silently
+          }
+          return;
         }
-        setResult(food);
+
+        Alert.alert(
+          'Could not identify food',
+          apiResult.error || 'Please try a clearer photo or search manually.',
+          [
+            { text: 'Search Manually', onPress: () => setShowSearch(true) },
+            { text: 'Try Again', onPress: () => setScanning(false) },
+          ]
+        );
         setScanning(false);
-        await autoSaveToHistory(food);
-        await loadTodayLog();
-        scheduleLocalNotification('Scan Complete!', `${food.calories} kcal detected`, { calories: food.calories });
+        return;
+      }
+
+      if (imageBase64 && !isApiConfigured()) {
+        Alert.alert(
+          'AI Scanning Unavailable',
+          'AI scanning is not available right now. Please search manually.',
+          [
+            { text: 'Search Manually', onPress: () => setShowSearch(true) },
+            { text: 'Cancel', onPress: () => setScanning(false) },
+          ]
+        );
+        setScanning(false);
         return;
       }
 
       Alert.alert(
-        'Could not identify food',
-        apiResult.error || 'Please try a clearer photo or search manually.',
-        [
-          { text: 'Search Manually', onPress: () => setShowSearch(true) },
-          { text: 'Try Again', onPress: () => setScanning(false) },
-        ]
+        'No Image',
+        'Please take a photo or upload an image to scan.',
+        [{ text: 'OK', onPress: () => setScanning(false) }]
       );
       setScanning(false);
-      return;
-    }
-
-    if (imageBase64 && !isApiConfigured()) {
-      Alert.alert(
-        'AI Scanning Unavailable',
-        'AI scanning is not available right now. Please search manually.',
-        [
-          { text: 'Search Manually', onPress: () => setShowSearch(true) },
-          { text: 'Cancel', onPress: () => setScanning(false) },
-        ]
-      );
+    } catch (error) {
       setScanning(false);
-      return;
+      Alert.alert('Scan Failed', 'Something went wrong. Please try again.');
     }
-
-    Alert.alert(
-      'No Image',
-      'Please take a photo or upload an image to scan.',
-      [{ text: 'OK', onPress: () => setScanning(false) }]
-    );
-    setScanning(false);
   };
 
   const autoSaveToHistory = async (food: any) => {
@@ -199,7 +212,7 @@ export default function ScannerScreen() {
       try {
         const photo = await cameraRef.current.takePictureAsync({ quality: 0.5, base64: true });
         if (photo && photo.base64) {
-          simulateScan(photo.base64);
+          await simulateScan(photo.base64);
         } else {
           Alert.alert('Error', 'Failed to capture image');
         }
@@ -210,9 +223,18 @@ export default function ScannerScreen() {
   };
 
   const pickImage = async () => {
-    const pickResult = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.5, base64: true });
-    if (!pickResult.canceled) {
-      simulateScan(pickResult.assets[0].base64 || undefined);
+    try {
+      const pickResult = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.5, base64: true });
+      if (!pickResult.canceled) {
+        const base64 = pickResult.assets[0]?.base64;
+        if (base64) {
+          simulateScan(base64);
+        } else {
+          Alert.alert('Image Error', 'Could not read the selected image. Please try another image.');
+        }
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Could not open image picker. Please try again.');
     }
   };
 
@@ -220,7 +242,10 @@ export default function ScannerScreen() {
     setResult(null);
   };
 
-  const getProgress = (current: number, target: number) => Math.min(current / target, 1);
+  const getProgress = (current: number, target: number) => {
+    if (!target || target <= 0) return 0;
+    return Math.min(current / target, 1);
+  };
   const getProgressColor = (p: number) => { if (p < 0.5) return '#4CAF50'; if (p < 0.8) return Colors.gold; return '#f44336'; };
 
   if (!permission) {

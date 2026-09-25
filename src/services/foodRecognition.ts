@@ -159,14 +159,14 @@ export async function recognizeFood(base64Image: string): Promise<{
   if (!API_KEY) {
     return {
       success: false,
-      error: 'API key not configured. Please set your Google Cloud Vision API key in Settings.',
+      error: 'AI scanning is not available. Please search manually.',
     };
   }
 
   if (API_KEY.length < 20) {
     return {
       success: false,
-      error: 'Invalid API key format. Please check your Google Cloud Vision API key.',
+      error: 'AI scanning is not available. Please search manually.',
     };
   }
 
@@ -221,7 +221,7 @@ export async function recognizeFood(base64Image: string): Promise<{
     if (data.responses[0].error) {
       return {
         success: false,
-        error: data.responses[0].error.message,
+        error: 'Could not analyze the image. Please try again or search manually.',
       };
     }
 
@@ -247,7 +247,7 @@ export async function recognizeFood(base64Image: string): Promise<{
   } catch (error: any) {
     return {
       success: false,
-      error: error.message || 'Failed to analyze image. Please check your connection.',
+      error: 'Could not analyze the image. Please check your connection and try again.',
     };
   }
 }
