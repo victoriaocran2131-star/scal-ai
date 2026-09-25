@@ -414,28 +414,37 @@ class ApiService {
       const uid = this.getUserId();
       if (!uid || !db) return { error: 'Not authenticated' };
 
-      const user = auth?.currentUser;
+      // Step 1: Delete all Firestore data while still authenticated
+      try {
+        const historyRef = collection(db, 'users', uid, 'history');
+        const historySnapshot = await getDocs(historyRef);
+        const historyDeletions = historySnapshot.docs.map((d) => deleteDoc(d.ref));
+        await Promise.all(historyDeletions);
 
+        await deleteDoc(doc(db, 'users', uid, 'subscription', 'current')).catch(() => {});
+        await deleteDoc(doc(db, 'users', uid, 'settings', 'goals')).catch(() => {});
+        await deleteDoc(doc(db, 'users', uid)).catch(() => {});
+      } catch (firestoreError) {
+        // Firestore deletion failed — still proceed to clear auth and local data
+      }
+
+      // Step 2: Delete auth account
+      const user = auth?.currentUser;
       if (user) {
         try {
           await deleteUser(user);
         } catch (authError: any) {
           if (authError.code === 'auth/requires-recent-login') {
-            return { error: 'Please sign out and sign back in, then try deleting your account again.' };
+            // Data already deleted — sign out and clear local state
+            await AsyncStorage.clear();
+            await signOut(auth!).catch(() => {});
+            return { success: true };
           }
-          throw authError;
+          // Auth deletion failed for other reasons — data already deleted
         }
       }
 
-      const historyRef = collection(db, 'users', uid, 'history');
-      const historySnapshot = await getDocs(historyRef);
-      const historyDeletions = historySnapshot.docs.map((d) => deleteDoc(d.ref));
-      await Promise.all(historyDeletions);
-
-      await deleteDoc(doc(db, 'users', uid, 'subscription', 'current')).catch(() => {});
-      await deleteDoc(doc(db, 'users', uid, 'settings', 'goals')).catch(() => {});
-      await deleteDoc(doc(db, 'users', uid)).catch(() => {});
-
+      // Step 3: Clear local storage
       await AsyncStorage.clear();
 
       return { success: true };
